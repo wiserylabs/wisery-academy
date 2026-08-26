@@ -21,3 +21,4 @@ backend/media/
 .vscode/
 .idea/
 _to_delete/
+.pytest_cache/

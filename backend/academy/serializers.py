@@ -12,16 +12,19 @@ class FileAssetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FileAsset
+        # "file" is the multipart upload field, write-only — clients never
+        # get a raw storage path back, only the presigned "download_url".
         fields = [
-            "id", "track", "title", "version", "download_url", "size_bytes",
-            "mime_type", "visibility", "status", "checksum_sha256",
-            "scan_status", "annotation", "uploaded_by_email", "created_at",
-            "published_at",
+            "id", "track", "title", "version", "file", "download_url",
+            "size_bytes", "mime_type", "visibility", "status",
+            "checksum_sha256", "scan_status", "annotation",
+            "uploaded_by_email", "created_at", "published_at",
         ]
         read_only_fields = [
             "id", "size_bytes", "checksum_sha256", "scan_status",
             "status", "uploaded_by_email", "created_at", "published_at",
         ]
+        extra_kwargs = {"file": {"write_only": True}}
 
     def get_download_url(self, obj):
         if obj.status != "published":
