@@ -46,6 +46,32 @@ Sign up a normal user from the portal's login screen (or via
 someone to Technical or Editor from the Django admin (Accounts → Users)
 until the in-app "manage users" screen exists.
 
+## Tests
+
+Backend (28 tests, pytest — see the previous commit message for the two
+bugs this suite caught):
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+python manage.py migrate  # not required for the tests themselves, but
+                           # harmless to run once locally
+python -m pytest -v
+```
+
+Frontend (14 tests, Vitest + React Testing Library — covers the login
+flow, the JWT token lifecycle in api.js, and the role-based dashboard
+rendering):
+
+```bash
+cd frontend
+npm install
+npm test
+```
+
+Both are also wired into CI (`.github/workflows/backend-tests.yml`); a
+frontend workflow is a natural next addition once you're past Phase 0.
+
 ## Moving to AWS
 
 Nothing in the code changes — only `.env`:

@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],
@@ -10,5 +10,10 @@ export default defineConfig({
       // So `npm run dev` works standalone too, without going through Caddy.
       "/api": "http://localhost:8000",
     },
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: "./src/setupTests.js",
+    css: false,
   },
 });
