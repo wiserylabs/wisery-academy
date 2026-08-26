@@ -20,3 +20,4 @@ backend/media/
 .DS_Store
 .vscode/
 .idea/
+_to_delete/
