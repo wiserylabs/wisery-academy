@@ -102,6 +102,35 @@ class TestFileUploadAndPublishAPI:
         resp = as_user(student).post(f"/api/files/{file_id}/publish/")
         assert resp.status_code == 403
 
+    def test_delete_writes_an_audit_log_entry_before_the_row_is_gone(self, as_user, editor, track):
+        upload = as_user(editor).post(
+            "/api/files/",
+            {"track": track.id, "title": "Day 1 deck", "file": make_upload()},
+            format="multipart",
+        )
+        file_id = upload.data["id"]
+
+        resp = as_user(editor).delete(f"/api/files/{file_id}/")
+
+        assert resp.status_code == 204
+        assert not FileAsset.objects.filter(id=file_id).exists()
+        entry = AuditLog.objects.get(target_id=file_id, action="delete")
+        assert entry.user.email == editor.email
+
+    def test_downloaded_flag_reflects_the_requesting_users_own_progress(self, as_user, editor, student, track):
+        f = FileAsset.objects.create(track=track, title="Day 1 deck", status="published", visibility="all")
+
+        before = as_user(student).get(f"/api/files/{f.id}/")
+        assert before.data["downloaded"] is False
+
+        as_user(student).post(f"/api/files/{f.id}/mark_downloaded/")
+        after = as_user(student).get(f"/api/files/{f.id}/")
+        assert after.data["downloaded"] is True
+
+        # Someone else's download doesn't leak onto this file's flag for the editor.
+        as_editor = as_user(editor).get(f"/api/files/{f.id}/")
+        assert as_editor.data["downloaded"] is False
+
 
 @pytest.mark.django_db
 class TestRoleBasedVisibility:
@@ -182,3 +211,18 @@ class TestTrackAPI:
         resp = as_user(student).get("/api/tracks/")
         assert resp.status_code == 200
         assert any(t["slug"] == "slide-decks" for t in resp.data["results"])
+
+    def test_published_and_downloaded_counts_are_real_not_fake(self, as_user, editor, student, track):
+        published = FileAsset.objects.create(track=track, title="Day 1 deck", status="published", visibility="all")
+        FileAsset.objects.create(track=track, title="Draft deck", status="draft", visibility="all")
+
+        before = as_user(student).get("/api/tracks/")
+        row = next(t for t in before.data["results"] if t["slug"] == "slide-decks")
+        assert row["file_count"] == 2  # counts drafts too
+        assert row["published_count"] == 1  # a draft was never downloadable
+        assert row["downloaded_count"] == 0
+
+        as_user(student).post(f"/api/files/{published.id}/mark_downloaded/")
+        after = as_user(student).get("/api/tracks/")
+        row = next(t for t in after.data["results"] if t["slug"] == "slide-decks")
+        assert row["downloaded_count"] == 1

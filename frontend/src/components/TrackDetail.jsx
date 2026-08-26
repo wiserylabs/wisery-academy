@@ -3,6 +3,22 @@ import { api } from "../api.js";
 import { StatusPill, VisibilityPill, formatSize } from "./Pills.jsx";
 import UploadModal from "./UploadModal.jsx";
 
+function EditIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 6h16M4 12h16M4 18h10" />
+    </svg>
+  );
+}
+
+function DeleteIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M5 7h14M10 7V5h4v2M8 7l1 13h6l1-13" />
+    </svg>
+  );
+}
+
 export default function TrackDetail({ track, user, onBack }) {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,8 +93,11 @@ export default function TrackDetail({ track, user, onBack }) {
       <button type="button" className="link-button" onClick={onBack}>
         ← All materials
       </button>
-      <h2>{track.title}</h2>
-      {track.description && <p className="muted">{track.description}</p>}
+
+      <div className="track-detail-head">
+        <h2>{track.title}</h2>
+        {track.description && <p className="muted">{track.description}</p>}
+      </div>
 
       {isEditor && (
         <div className="manage-bar">
@@ -117,60 +136,89 @@ export default function TrackDetail({ track, user, onBack }) {
               </tr>
             </thead>
             <tbody>
-              {files.map((file) => (
-                <tr key={file.id}>
-                  <td>
-                    <strong>{file.title}</strong>
-                    {file.annotation && <div className="annotation">{file.annotation}</div>}
-                  </td>
-                  <td>{file.version}</td>
-                  {isEditor && (
+              {files.map((file) => {
+                const addedByYou = isEditor && user.email && file.uploaded_by_email === user.email;
+                return (
+                  <tr key={file.id}>
                     <td>
-                      <StatusPill status={file.status} />
+                      <div className="file-title-cell">
+                        <div className="file-title-row">
+                          <strong>{file.title}</strong>
+                          {addedByYou && <span className="pill success">Added by you</span>}
+                        </div>
+                        {file.annotation && <div className="annotation">{file.annotation}</div>}
+                      </div>
                     </td>
-                  )}
-                  {isEditor && (
-                    <td>
-                      <VisibilityPill visibility={file.visibility} />
-                    </td>
-                  )}
-                  <td>{formatSize(file.size_bytes)}</td>
-                  <td>
-                    {file.download_url ? (
-                      <a
-                        href={file.download_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={() => handleDownloadClick(file)}
-                      >
-                        Download
-                      </a>
-                    ) : (
-                      <span className="muted">Not published</span>
+                    <td className="mono-cell">{file.version}</td>
+                    {isEditor && (
+                      <td>
+                        <StatusPill status={file.status} />
+                      </td>
                     )}
-                  </td>
-                  {manageMode && (
-                    <td className="row-actions">
-                      {file.status === "draft" && (
-                        <button type="button" disabled={busyId === file.id} onClick={() => handlePublish(file)}>
-                          Publish
-                        </button>
+                    {isEditor && (
+                      <td>
+                        <VisibilityPill visibility={file.visibility} />
+                      </td>
+                    )}
+                    <td className="mono-cell">{formatSize(file.size_bytes)}</td>
+                    <td>
+                      {file.download_url ? (
+                        <span className="download-cell">
+                          <a
+                            href={file.download_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={() => handleDownloadClick(file)}
+                          >
+                            Download
+                          </a>
+                          {file.downloaded && (
+                            <span className="downloaded-check" title="You've downloaded this before">
+                              ✓
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="muted">Not published</span>
                       )}
-                      <button type="button" disabled={busyId === file.id} onClick={() => openEditModal(file)}>
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="danger"
-                        disabled={busyId === file.id}
-                        onClick={() => handleDelete(file)}
-                      >
-                        Delete
-                      </button>
                     </td>
-                  )}
-                </tr>
-              ))}
+                    {manageMode && (
+                      <td className="row-actions">
+                        {file.status === "draft" && (
+                          <button
+                            type="button"
+                            className="publish-link"
+                            disabled={busyId === file.id}
+                            onClick={() => handlePublish(file)}
+                          >
+                            Publish
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="icon-button-sm"
+                          title="Edit"
+                          aria-label="Edit"
+                          disabled={busyId === file.id}
+                          onClick={() => openEditModal(file)}
+                        >
+                          <EditIcon />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-button-sm danger-hover"
+                          title="Delete"
+                          aria-label="Delete"
+                          disabled={busyId === file.id}
+                          onClick={() => handleDelete(file)}
+                        >
+                          <DeleteIcon />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

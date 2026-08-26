@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import FileAsset, Track
+from .models import FileAsset, FileProgress, Track
 
 
 class FileAssetSerializer(serializers.ModelSerializer):
@@ -9,6 +9,10 @@ class FileAssetSerializer(serializers.ModelSerializer):
     # ever gets a permanent link to the bucket.
     download_url = serializers.SerializerMethodField()
     uploaded_by_email = serializers.CharField(source="uploaded_by.email", read_only=True)
+    # Whether the CURRENT user has downloaded this file before -- backs the
+    # small "already downloaded" indicator in the file table. Always False
+    # for an anonymous/missing request context (e.g. serialized outside a view).
+    downloaded = serializers.SerializerMethodField()
 
     class Meta:
         model = FileAsset
@@ -18,11 +22,11 @@ class FileAssetSerializer(serializers.ModelSerializer):
             "id", "track", "title", "version", "file", "download_url",
             "size_bytes", "mime_type", "visibility", "status",
             "checksum_sha256", "scan_status", "annotation",
-            "uploaded_by_email", "created_at", "published_at",
+            "uploaded_by_email", "downloaded", "created_at", "published_at",
         ]
         read_only_fields = [
             "id", "size_bytes", "checksum_sha256", "scan_status",
-            "status", "uploaded_by_email", "created_at", "published_at",
+            "status", "uploaded_by_email", "downloaded", "created_at", "published_at",
         ]
         extra_kwargs = {"file": {"write_only": True}}
 
@@ -36,10 +40,40 @@ class FileAssetSerializer(serializers.ModelSerializer):
             pass
         return obj.file.url if obj.file else None
 
+    def get_downloaded(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return FileProgress.objects.filter(
+            user=request.user, file=obj, downloaded_at__isnull=False
+        ).exists()
+
 
 class TrackSerializer(serializers.ModelSerializer):
     file_count = serializers.IntegerField(source="files.count", read_only=True)
+    # Real numbers behind the portal's "N of M downloaded" progress —
+    # sourced from FileProgress, not a fake per-track counter. Both scoped
+    # to published files only, since a draft was never downloadable.
+    published_count = serializers.SerializerMethodField()
+    downloaded_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Track
-        fields = ["id", "slug", "title", "description", "sort_order", "file_count"]
+        fields = [
+            "id", "slug", "title", "description", "sort_order",
+            "file_count", "published_count", "downloaded_count",
+        ]
+
+    def get_published_count(self, obj):
+        return obj.files.filter(status="published").count()
+
+    def get_downloaded_count(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return 0
+        return FileProgress.objects.filter(
+            user=request.user,
+            file__track=obj,
+            file__status="published",
+            downloaded_at__isnull=False,
+        ).count()

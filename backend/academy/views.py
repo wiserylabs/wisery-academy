@@ -69,6 +69,12 @@ class FileAssetViewSet(viewsets.ModelViewSet):
         log_action(request, "publish", file)
         return Response(FileAssetSerializer(file, context={"request": request}).data)
 
+    def perform_destroy(self, instance):
+        # Log while the object (and its pk) still exists -- an
+        # AuditLog row is the only record that a file ever existed here.
+        log_action(self.request, "delete", instance)
+        instance.delete()
+
     @action(detail=True, methods=["post"])
     def mark_downloaded(self, request, pk=None):
         file = self.get_object()
