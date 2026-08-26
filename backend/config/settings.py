@@ -35,6 +35,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -123,7 +124,11 @@ CORS_ALLOWED_ORIGINS = env.list(
 # real S3 with an IAM user/role instead. No code difference either way. ---
 STORAGES = {
     "default": {"BACKEND": "storages.backends.s3boto3.S3Boto3Storage"},
-    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    # gunicorn doesn't serve static files on its own (only `runserver`
+    # auto-serves them) -- WhiteNoise serves the admin's CSS/JS straight
+    # out of the container, no separate static host needed anywhere,
+    # including later in AWS.
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
 AWS_ACCESS_KEY_ID = env("S3_ACCESS_KEY", default="wisery-admin")
