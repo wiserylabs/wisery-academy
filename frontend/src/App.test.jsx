@@ -1,77 +1,62 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import App from "./App.jsx";
-import { api } from "./api.js";
 
-vi.mock("./api.js", () => ({
-  api: {
-    login: vi.fn(),
-    signup: vi.fn(),
-    me: vi.fn(),
-    tracks: vi.fn(),
-    files: vi.fn(),
-    logout: vi.fn(),
-  },
-}));
+// The portal is a self-contained client-side demo, so these are plain
+// interaction tests — no API mocking needed.
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  window.scrollTo = () => {};
 });
 
-async function fillAndSubmitLogin(email = "dana@wisery.test", password = "correct-horse-1") {
+async function signInAs(name) {
   const user = userEvent.setup();
-  await user.type(screen.getByPlaceholderText("Work email"), email);
-  await user.type(screen.getByPlaceholderText("Password"), password);
-  await user.click(screen.getByRole("button", { name: "Sign in" }));
+  render(<App />);
+  await user.click(screen.getByRole("button", { name: new RegExp(name) }));
+  return user;
 }
 
-describe("logged out", () => {
-  it("shows the sign-in form, not the portal", () => {
+describe("login screen", () => {
+  it("shows the sign-in panel and the demo role picker, not the portal", () => {
     render(<App />);
-    expect(screen.getByPlaceholderText("Work email")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.getByText(/Demo — sign in as/i)).toBeInTheDocument();
     expect(screen.queryByText("Material tracks")).not.toBeInTheDocument();
-  });
-
-  it("on success, logs in, fetches the current user, and hands off to the Portal", async () => {
-    api.login.mockResolvedValue({ access: "token" });
-    api.me.mockResolvedValue({ email: "dana@wisery.test", full_name: "Dana Levi", role: "student" });
-    api.tracks.mockResolvedValue([]);
-
-    render(<App />);
-    await fillAndSubmitLogin();
-
-    await waitFor(() => expect(screen.getByText(/Dana Levi/)).toBeInTheDocument());
-    expect(api.login).toHaveBeenCalledWith("dana@wisery.test", "correct-horse-1");
-    expect(api.me).toHaveBeenCalled();
-  });
-
-  it("shows the server's error message and stays on the login screen when login fails", async () => {
-    api.login.mockRejectedValue(new Error("No active account found with the given credentials"));
-
-    render(<App />);
-    await fillAndSubmitLogin("dana@wisery.test", "wrong-password");
-
-    expect(await screen.findByText("No active account found with the given credentials")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Work email")).toBeInTheDocument();
-    expect(api.me).not.toHaveBeenCalled();
   });
 });
 
-describe("logged in", () => {
+describe("signed in", () => {
+  it("signs in as the Student demo user and lands on the home hero + tracks", async () => {
+    await signInAs("Dana Levi");
+    expect(screen.getByText(/Your full training package/)).toBeInTheDocument();
+    expect(screen.getByText("Material tracks")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Slide Decks" })).toBeInTheDocument();
+  });
+
+  it("opens a track and shows its file table", async () => {
+    const user = await signInAs("Dana Levi");
+    await user.click(screen.getByRole("heading", { name: "Hands-On Lab Guides" }));
+    expect(screen.getByText("Building your first entity graph")).toBeInTheDocument();
+    expect(screen.getByText(/items · newest first/)).toBeInTheDocument();
+  });
+
+  it("switches role live via the Viewing as toggle", async () => {
+    const user = await signInAs("Dana Levi");
+    expect(screen.getByText("Dana Levi")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Editor" }));
+    expect(screen.getByText("Maya Shani")).toBeInTheDocument();
+  });
+
+  it("exposes Editor manage-mode only to the Editor role", async () => {
+    const user = await signInAs("Maya Shani");
+    await user.click(screen.getByRole("heading", { name: "Hands-On Lab Guides" }));
+    expect(screen.getByRole("button", { name: /Manage files/ })).toBeInTheDocument();
+  });
+
   it("signs out back to the login screen", async () => {
-    api.login.mockResolvedValue({ access: "token" });
-    api.me.mockResolvedValue({ email: "dana@wisery.test", full_name: "Dana Levi", role: "student" });
-    api.tracks.mockResolvedValue([]);
-
-    render(<App />);
-    await fillAndSubmitLogin();
-    await waitFor(() => expect(screen.getByText(/Dana Levi/)).toBeInTheDocument());
-
-    const user = userEvent.setup();
+    const user = await signInAs("Dana Levi");
     await user.click(screen.getByRole("button", { name: "Sign out" }));
-
-    expect(api.logout).toHaveBeenCalled();
-    expect(screen.getByPlaceholderText("Work email")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
   });
 });
