@@ -1,24 +1,58 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App.jsx";
 
-// The portal is a self-contained client-side demo, so these are plain
-// interaction tests — no API mocking needed.
+// The connected app talks to the API, so we mock api.js. The mock remembers
+// which account "logged in" so api.me() returns the matching role.
+const USERS = {
+  "dana@wisery.ai": { id: 1, email: "dana@wisery.ai", full_name: "Dana Levi", role: "student" },
+  "omer@wisery.ai": { id: 2, email: "omer@wisery.ai", full_name: "Omer Katz", role: "technical" },
+  "maya@wisery.ai": { id: 3, email: "maya@wisery.ai", full_name: "Maya Shani", role: "editor" },
+};
 
-beforeEach(() => {
-  window.scrollTo = () => {};
+const TRACKS = [
+  { id: "t1", slug: "slide-decks", title: "Slide Decks", description: "Instructor decks.", sort_order: 1, file_count: 2, published_count: 2, downloaded_count: 1, updated_at: "2026-08-18T00:00:00Z" },
+  { id: "t2", slug: "lab-guides", title: "Hands-On Lab Guides", description: "Lab booklets.", sort_order: 2, file_count: 1, published_count: 1, downloaded_count: 0, updated_at: "2026-08-21T00:00:00Z" },
+  { id: "tech", slug: "technical-section", title: "Technical Section", description: "Runbooks.", sort_order: 7, file_count: 0, published_count: 0, downloaded_count: 0, updated_at: null },
+];
+
+const FILES = {
+  t2: [
+    { id: "f1", track: "t2", title: "Building your first entity graph", version: "2.4.1", size_bytes: 19000000, mime_type: "application/pdf", visibility: "all", status: "published", annotation: "", download_url: "http://x/f1.pdf", downloaded: false, created_at: "2026-08-21T00:00:00Z", published_at: "2026-08-21T00:00:00Z" },
+  ],
+};
+
+vi.mock("./api.js", () => {
+  let current = null;
+  return {
+    api: {
+      login: vi.fn(async (email) => { current = USERS[email] || { email, role: "student", full_name: email }; return { access: "t" }; }),
+      me: vi.fn(async () => current),
+      logout: vi.fn(() => { current = null; }),
+      tracks: vi.fn(async () => TRACKS),
+      files: vi.fn(async (id) => FILES[id] || []),
+      uploadFile: vi.fn(async () => ({})),
+      updateFile: vi.fn(async () => ({})),
+      publishFile: vi.fn(async () => ({})),
+      deleteFile: vi.fn(async () => null),
+      markDownloaded: vi.fn(async () => ({})),
+    },
+  };
 });
 
-async function signInAs(name) {
+beforeEach(() => { window.scrollTo = () => {}; });
+
+async function loginAs(name) {
   const user = userEvent.setup();
   render(<App />);
   await user.click(screen.getByRole("button", { name: new RegExp(name) }));
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Material tracks" })).toBeInTheDocument());
   return user;
 }
 
-describe("login screen", () => {
-  it("shows the sign-in panel and the demo role picker, not the portal", () => {
+describe("login", () => {
+  it("shows the sign-in panel and demo picker, not the portal", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
     expect(screen.getByText(/Demo — sign in as/i)).toBeInTheDocument();
@@ -26,36 +60,34 @@ describe("login screen", () => {
   });
 });
 
-describe("signed in", () => {
-  it("signs in as the Student demo user and lands on the home hero + tracks", async () => {
-    await signInAs("Dana Levi");
-    expect(screen.getByText(/Your full training package/)).toBeInTheDocument();
-    expect(screen.getByText("Material tracks")).toBeInTheDocument();
+describe("connected portal", () => {
+  it("signs in as Student and renders tracks from the API", async () => {
+    await loginAs("Dana Levi");
     expect(screen.getByRole("heading", { name: "Slide Decks" })).toBeInTheDocument();
-  });
-
-  it("opens a track and shows its file table", async () => {
-    const user = await signInAs("Dana Levi");
-    await user.click(screen.getByRole("heading", { name: "Hands-On Lab Guides" }));
-    expect(screen.getByText("Building your first entity graph")).toBeInTheDocument();
-    expect(screen.getByText(/items · newest first/)).toBeInTheDocument();
-  });
-
-  it("switches role live via the Viewing as toggle", async () => {
-    const user = await signInAs("Dana Levi");
     expect(screen.getByText("Dana Levi")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Editor" }));
-    expect(screen.getByText("Maya Shani")).toBeInTheDocument();
   });
 
-  it("exposes Editor manage-mode only to the Editor role", async () => {
-    const user = await signInAs("Maya Shani");
+  it("opens a track and lists its files from the API", async () => {
+    const user = await loginAs("Dana Levi");
     await user.click(screen.getByRole("heading", { name: "Hands-On Lab Guides" }));
-    expect(screen.getByRole("button", { name: /Manage files/ })).toBeInTheDocument();
+    expect(await screen.findByText("Building your first entity graph")).toBeInTheDocument();
+  });
+
+  it("switches role live via Viewing as (re-authenticates as the seeded user)", async () => {
+    const user = await loginAs("Dana Levi");
+    await user.click(screen.getByRole("button", { name: "Editor" }));
+    await waitFor(() => expect(screen.getByText("Maya Shani")).toBeInTheDocument());
+  });
+
+  it("gives the Editor manage-mode with Add files inside a track", async () => {
+    const user = await loginAs("Maya Shani");
+    await user.click(screen.getByRole("heading", { name: "Hands-On Lab Guides" }));
+    await user.click(await screen.findByRole("button", { name: /Manage files/ }));
+    expect(screen.getByRole("button", { name: /Add files/ })).toBeInTheDocument();
   });
 
   it("signs out back to the login screen", async () => {
-    const user = await signInAs("Dana Levi");
+    const user = await loginAs("Dana Levi");
     await user.click(screen.getByRole("button", { name: "Sign out" }));
     expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
   });

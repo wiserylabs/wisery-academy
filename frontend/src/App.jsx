@@ -1,13 +1,12 @@
 import "./styles.css";
-import DemoApp from "./demo/DemoApp.jsx";
+import AppRoot from "./app/AppRoot.jsx";
 
-// The Wisery Academy Portal — a faithful, self-contained reproduction of the
-// design prototype. The whole experience (login, the six material tracks,
-// every file table, the deep lab/dataset pages, the Technical Section, search,
-// FAQ, contact, the live role switcher and the Editor manage-mode) runs
-// client-side from src/demo/, so it looks and behaves exactly like the mockup
-// without needing the backend. Swap DemoApp for API-backed screens when wiring
-// this to the live Django service.
+// The Wisery Academy Portal — the design prototype's look, wired to the live
+// Django API. Login is real JWT auth (the demo picker and the header "Viewing
+// as" switcher sign in as the seeded per-role accounts). Tracks and files come
+// from the API, and the Editor tools (upload, edit, annotate, publish, delete)
+// persist through it. See src/app/ for the connected screens; src/demo/ holds
+// the earlier fully client-side mock and shared presentational bits.
 export default function App() {
-  return <DemoApp />;
+  return <AppRoot />;
 }

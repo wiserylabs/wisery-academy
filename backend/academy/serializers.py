@@ -56,13 +56,25 @@ class TrackSerializer(serializers.ModelSerializer):
     # to published files only, since a draft was never downloadable.
     published_count = serializers.SerializerMethodField()
     downloaded_count = serializers.SerializerMethodField()
+    # Most-recent publish in the track — backs the "Updated <date>" line on
+    # each home card. Null for a track with nothing published yet.
+    updated_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Track
         fields = [
             "id", "slug", "title", "description", "sort_order",
-            "file_count", "published_count", "downloaded_count",
+            "file_count", "published_count", "downloaded_count", "updated_at",
         ]
+
+    def get_updated_at(self, obj):
+        latest = (
+            obj.files.filter(status="published", published_at__isnull=False)
+            .order_by("-published_at")
+            .values_list("published_at", flat=True)
+            .first()
+        )
+        return latest.isoformat() if latest else None
 
     def get_published_count(self, obj):
         return obj.files.filter(status="published").count()
