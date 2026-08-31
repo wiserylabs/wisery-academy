@@ -10,6 +10,7 @@ import Home from "./Home.jsx";
 import Login from "./Login.jsx";
 import Search from "./Search.jsx";
 import Technical from "./Technical.jsx";
+import Users from "./Users.jsx";
 import { useApp } from "./useApp.js";
 
 function Toast({ toast }) {
@@ -44,6 +45,11 @@ function CurrentRoute({ app }) {
     case "search": return <Search query={route.query} tracks={tracks} filesByTrack={filesByTrack} actions={actions} />;
     case "faq": return <Faq />;
     case "contact": return <Contact />;
+    case "users":
+      // Editors only — anyone else falls back home.
+      return user.role === "editor"
+        ? <Users currentUser={user} actions={actions} />
+        : <Home tracks={tracks} tracksError={tracksError} role={user.role} actions={actions} />;
     default: return <Home tracks={tracks} tracksError={tracksError} role={user.role} actions={actions} />;
   }
 }

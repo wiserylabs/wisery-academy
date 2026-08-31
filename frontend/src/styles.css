@@ -565,6 +565,35 @@ textarea { resize: vertical; }
 .contact-form-foot { display: flex; align-items: center; gap: 16px; }
 .contact-form-note { font-size: 12px; color: var(--dim); }
 
+/* ─────────────────────────── User management ─────────────────────────── */
+select {
+  width: 100%;
+  background: var(--control-inset-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-main);
+  padding: 9px 10px;
+  font-size: 13px;
+  outline: none;
+}
+select:focus { border-color: var(--accent); }
+select:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.user-create { background: var(--bg-white); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px 22px; margin-bottom: 24px; }
+.user-create h2 { font-size: 16px; margin-bottom: 14px; }
+.user-create-grid { display: grid; grid-template-columns: 1.3fr 1.1fr 130px 160px auto; gap: 12px; align-items: end; }
+.user-create-grid .btn { height: 38px; }
+
+.users-table { border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow-x: auto; }
+.user-head, .user-row { display: grid; gap: 12px; align-items: center; padding: 0 16px; min-width: 760px; }
+.user-head { height: 40px; background: var(--portal-deep); border-bottom: 1px solid var(--border-color); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.user-row { padding-top: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border-soft); }
+.user-row:last-child { border-bottom: 0; }
+.user-cell { min-width: 0; display: flex; align-items: center; gap: 8px; }
+.user-cell input, .user-cell select { padding: 7px 9px; font-size: 12.5px; }
+.user-you { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); padding: 2px 6px; border-radius: var(--radius-pill); flex: none; }
+.user-actions { justify-content: flex-end; gap: 6px; }
+
 /* ─────────────────────────── Drawer ─────────────────────────── */
 .drawer-scrim { position: fixed; inset: 0; background: rgba(4, 12, 17, 0.6); z-index: 60; }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 420px; max-width: 92vw; z-index: 61; background: var(--portal-deep); border-left: 1px solid var(--border-medium); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; }

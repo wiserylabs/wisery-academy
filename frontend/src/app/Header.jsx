@@ -8,6 +8,8 @@ export default function Header({ user, route, actions }) {
     { key: "home", label: "Home" },
     { key: "faq", label: "FAQ" },
     { key: "contact", label: "Contact" },
+    // The user-management screen is Editors only.
+    ...(user.role === "editor" ? [{ key: "users", label: "Users" }] : []),
   ];
 
   return (

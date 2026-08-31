@@ -38,6 +38,13 @@ vi.mock("./api.js", () => {
       publishFile: vi.fn(async () => ({})),
       deleteFile: vi.fn(async () => null),
       markDownloaded: vi.fn(async () => ({})),
+      users: vi.fn(async () => [
+        { id: 1, email: "dana@wisery.ai", full_name: "Dana Levi", role: "student" },
+        { id: 3, email: "maya@wisery.ai", full_name: "Maya Shani", role: "editor" },
+      ]),
+      createUser: vi.fn(async () => ({})),
+      updateUser: vi.fn(async () => ({})),
+      deleteUser: vi.fn(async () => null),
     },
   };
 });
@@ -101,5 +108,18 @@ describe("connected portal", () => {
     const user = await loginAs("Dana Levi");
     await user.click(screen.getByRole("button", { name: "Sign out" }));
     expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+  });
+
+  it("shows the Users link only to Editors", async () => {
+    await loginAs("Dana Levi");
+    expect(screen.queryByRole("button", { name: "Users" })).not.toBeInTheDocument();
+  });
+
+  it("opens the user-management screen for an Editor and lists users", async () => {
+    const user = await loginAs("Maya Shani");
+    await user.click(screen.getByRole("button", { name: "Users" }));
+    expect(await screen.findByRole("heading", { name: "User management" })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("dana@wisery.ai")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("maya@wisery.ai")).toBeInTheDocument();
   });
 });

@@ -80,6 +80,20 @@ export const api = {
   markDownloaded(id) {
     return request(`/files/${id}/mark_downloaded/`, { method: "POST" });
   },
+  // --- Editor-only user management ---
+  async users() {
+    const data = await request("/auth/users/");
+    return data?.results ?? data;
+  },
+  createUser(fields) {
+    return request("/auth/users/", { method: "POST", body: JSON.stringify(fields) });
+  },
+  updateUser(id, fields) {
+    return request(`/auth/users/${id}/`, { method: "PATCH", body: JSON.stringify(fields) });
+  },
+  deleteUser(id) {
+    return request(`/auth/users/${id}/`, { method: "DELETE" });
+  },
   // Streams the file from the API (which is reachable everywhere) rather than
   // a presigned storage URL (which isn't, behind Docker/MinIO), then saves it
   // via a temporary object URL. Sends the JWT, so a plain link won't do.
