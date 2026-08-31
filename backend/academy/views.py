@@ -1,3 +1,6 @@
+import os
+
+from django.http import FileResponse, Http404
 from django.utils import timezone
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
@@ -82,3 +85,27 @@ class FileAssetViewSet(viewsets.ModelViewSet):
         progress.downloaded_at = timezone.now()
         progress.save(update_fields=["downloaded_at"])
         return Response({"status": "recorded"})
+
+    @action(detail=True, methods=["get"])
+    def download(self, request, pk=None):
+        # Stream the file through the API rather than handing the browser a
+        # presigned storage URL. That URL points at the S3/MinIO endpoint,
+        # which is only reachable from inside the compose network (and would
+        # differ again on AWS) -- streaming works identically everywhere, is
+        # permission-checked by CanViewFile above, and is written to the
+        # audit log. get_object() already applies the draft/visibility rules,
+        # so a Student can never reach a Technical-only or draft file here.
+        file = self.get_object()
+        if not file.file:
+            raise Http404("This file has no stored content.")
+
+        progress, _ = FileProgress.objects.get_or_create(user=request.user, file=file)
+        progress.downloaded_at = timezone.now()
+        progress.save(update_fields=["downloaded_at"])
+        log_action(request, "download", file)
+
+        filename = os.path.basename(file.file.name) or f"{file.title}"
+        response = FileResponse(file.file.open("rb"), as_attachment=True, filename=filename)
+        if file.mime_type:
+            response["Content-Type"] = file.mime_type
+        return response

@@ -80,6 +80,30 @@ export const api = {
   markDownloaded(id) {
     return request(`/files/${id}/mark_downloaded/`, { method: "POST" });
   },
+  // Streams the file from the API (which is reachable everywhere) rather than
+  // a presigned storage URL (which isn't, behind Docker/MinIO), then saves it
+  // via a temporary object URL. Sends the JWT, so a plain link won't do.
+  async downloadFile(id) {
+    const headers = {};
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+    const res = await fetch(`${BASE}/files/${id}/download/`, { headers });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `Download failed: ${res.status}`);
+    }
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+    const filename = match ? decodeURIComponent(match[1]) : "download";
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
   logout() {
     accessToken = null;
   },

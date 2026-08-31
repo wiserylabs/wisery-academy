@@ -65,7 +65,7 @@ function FileRow({ file, index, manageMode, columns, actions }) {
         </span>
       ) : (
         <span className="file-cell cell-download" onClick={(e) => e.stopPropagation()}>
-          <button type="button" className="dl-btn" disabled={!file.download_url} onClick={() => actions.download(file)}>
+          <button type="button" className="dl-btn" onClick={() => actions.download(file)}>
             {formatBadge(file)}<Icon name="download" size={13} />
           </button>
         </span>

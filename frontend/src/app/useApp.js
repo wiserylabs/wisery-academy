@@ -129,12 +129,13 @@ export function useApp() {
   }, [refresh, flash]);
 
   const download = useCallback(async (file) => {
-    if (file.download_url) window.open(file.download_url, "_blank", "noopener");
     try {
-      await api.markDownloaded(file.id);
+      await api.downloadFile(file.id);
       await refresh(file.track);
-    } catch { /* a download that isn't recorded shouldn't block the user */ }
-  }, [refresh]);
+    } catch (err) {
+      flash(err.message);
+    }
+  }, [refresh, flash]);
 
   // ── Modals / confirm ──
   const openUpload = useCallback((trackId) => setModal({ kind: "upload", trackId }), []);

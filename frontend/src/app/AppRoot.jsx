@@ -23,6 +23,11 @@ function CurrentRoute({ app }) {
   if (route.name === "category") {
     const track = tracks.find((t) => t.id === route.trackId);
     if (!track) return <p className="muted">Loading…</p>;
+    // A Student can never see the Technical Section's file list — the folder
+    // exists for them, but only as the locked "request access" page.
+    if (track.slug === "technical-section" && user.role === "student") {
+      return <Technical actions={actions} />;
+    }
     return (
       <Category
         track={track}
@@ -39,7 +44,7 @@ function CurrentRoute({ app }) {
     case "search": return <Search query={route.query} tracks={tracks} filesByTrack={filesByTrack} actions={actions} />;
     case "faq": return <Faq />;
     case "contact": return <Contact />;
-    default: return <Home tracks={tracks} tracksError={tracksError} actions={actions} />;
+    default: return <Home tracks={tracks} tracksError={tracksError} role={user.role} actions={actions} />;
   }
 }
 

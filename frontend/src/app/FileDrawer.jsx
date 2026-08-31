@@ -13,9 +13,12 @@ export default function FileDrawer({ modal, tracks, actions }) {
   const file = modal.file;
   const track = tracks.find((t) => t.id === (isEdit ? file.track : modal.trackId));
 
+  // New files in the Technical Section default to Technical+ (the backend
+  // enforces this too), so an editor never accidentally exposes a runbook.
+  const defaultVisibility = track?.slug === "technical-section" ? "technical_plus" : "all";
   const [title, setTitle] = useState(file?.title ?? "");
   const [version, setVersion] = useState(file?.version ?? "1.0");
-  const [visibility, setVisibility] = useState(file?.visibility ?? "all");
+  const [visibility, setVisibility] = useState(file?.visibility ?? defaultVisibility);
   const [annotation, setAnnotation] = useState(file?.annotation ?? "");
   const [selectedFile, setSelectedFile] = useState(null);
   const [dragging, setDragging] = useState(false);

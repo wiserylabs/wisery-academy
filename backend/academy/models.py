@@ -79,6 +79,15 @@ class FileAsset(models.Model):
     def __str__(self):
         return f"{self.title} v{self.version} ({self.status})"
 
+    def save(self, *args, **kwargs):
+        # The Technical Section is defined by access, not by folder name: a
+        # file in it is never world-visible. Coerce an "all" upload up to
+        # Technical+ so a Student can't see it even if the uploader left the
+        # visibility on its default. (Editors can still choose editors_only.)
+        if self.track_id and self.visibility == Visibility.ALL and self.track.slug == "technical-section":
+            self.visibility = Visibility.TECHNICAL_PLUS
+        super().save(*args, **kwargs)
+
     def compute_checksum(self):
         """Streams the stored file through SHA-256 without loading it
         entirely into memory — fine for the multi-GB decks/videos this

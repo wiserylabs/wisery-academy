@@ -54,7 +54,7 @@ function TrackCard({ track, onOpen }) {
   );
 }
 
-export default function Home({ tracks, tracksError, actions }) {
+export default function Home({ tracks, tracksError, role, actions }) {
   const material = tracks.filter((t) => t.slug !== "technical-section");
   const technical = tracks.find((t) => t.slug === "technical-section");
   const totalFiles = material.reduce((s, t) => s + (t.file_count || 0), 0);
@@ -64,10 +64,12 @@ export default function Home({ tracks, tracksError, actions }) {
     .sort()
     .pop();
 
+  const canSeeTechnical = role === "technical" || role === "editor";
   const openTechnical = () => {
     if (!technical) return;
-    // Students get the locked explainer; Technical/Editor open the real folder.
-    if (technical.file_count > 0) actions.go("category", { trackId: technical.id });
+    // Role decides — Students get the locked explainer, never the file list;
+    // Technical/Editor open the real folder.
+    if (canSeeTechnical) actions.go("category", { trackId: technical.id });
     else actions.go("technical");
   };
 
@@ -108,7 +110,7 @@ export default function Home({ tracks, tracksError, actions }) {
               <h3>{technical.title}</h3>
               <p>{technical.description}</p>
               <span className="technical-card-cta">
-                {technical.file_count > 0 ? "Open Technical Section" : "See access requirements"} <Icon name="arrow" size={13} />
+                {canSeeTechnical ? "Open Technical Section" : "See access requirements"} <Icon name="arrow" size={13} />
               </span>
             </div>
           </button>

@@ -130,6 +130,7 @@ class Command(BaseCommand):
         editor = self._seed_users()
         self._seed_tracks()
         self._seed_files(editor)
+        self._secure_technical_section()
         self.stdout.write(self.style.SUCCESS(
             "\nDemo ready. Sign in with any of:"
             "\n  dana@wisery.ai  (Student)"
@@ -191,3 +192,16 @@ class Command(BaseCommand):
                 fa.compute_checksum()
                 fa.save()
             self.stdout.write(f"seeded {len(rows)} files into {track.title}")
+
+    def _secure_technical_section(self):
+        # Any file already uploaded to the Technical Section with world
+        # visibility (e.g. a test upload that kept the default) is pulled up
+        # to Technical+ so Students can't see it.
+        tech = Track.objects.filter(slug="technical-section").first()
+        if not tech:
+            return
+        stray = tech.files.filter(visibility="all")
+        count = stray.count()
+        if count:
+            stray.update(visibility="technical_plus")
+            self.stdout.write(f"secured {count} stray Technical Section file(s)")
