@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Avatar, Icon } from "../demo/ui.jsx";
 import { ROLE_SHORT, initialsOf } from "./format.js";
 
-const ROLES = ["student", "technical", "editor"];
-
 export default function Header({ user, route, actions }) {
   const [q, setQ] = useState("");
   const nav = [
@@ -40,18 +38,7 @@ export default function Header({ user, route, actions }) {
           />
         </div>
 
-        <div className="viewing-as">
-          <span className="viewing-as-label">Viewing as</span>
-          <div className="role-toggle" role="group" aria-label="Sign in as a different demo role">
-            {ROLES.map((r) => (
-              <button key={r} type="button" className={`role-toggle-btn ${user.role === r ? "active" : ""}`} onClick={() => actions.loginAs(r)}>
-                {ROLE_SHORT[r]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="header-user">
+        <div className="header-user" style={{ marginLeft: "auto" }}>
           <Avatar initials={initialsOf(user)} size={34} />
           <div className="header-user-id">
             <span className="header-user-name">{user.full_name || user.email}</span>

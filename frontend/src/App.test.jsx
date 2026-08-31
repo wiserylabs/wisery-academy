@@ -73,10 +73,12 @@ describe("connected portal", () => {
     expect(await screen.findByText("Building your first entity graph")).toBeInTheDocument();
   });
 
-  it("switches role live via Viewing as (re-authenticates as the seeded user)", async () => {
-    const user = await loginAs("Dana Levi");
-    await user.click(screen.getByRole("button", { name: "Editor" }));
-    await waitFor(() => expect(screen.getByText("Maya Shani")).toBeInTheDocument());
+  it("signs in as a different role from the login picker", async () => {
+    const user = await loginAs("Maya Shani");
+    expect(screen.getByText("Maya Shani")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+    await user.click(screen.getByRole("button", { name: /Omer Katz/ }));
+    await waitFor(() => expect(screen.getByText("Omer Katz")).toBeInTheDocument());
   });
 
   it("gives the Editor manage-mode with Add files inside a track", async () => {
