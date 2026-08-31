@@ -418,6 +418,14 @@ textarea { resize: vertical; }
 .file-video { color: var(--accent); }
 .file-note { font-size: 11.5px; color: var(--warn); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cell-version, .cell-size { font-size: 12px; color: var(--text-third); }
+.file-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.file-vis { color: var(--text-third); }
+.file-note-inline { color: var(--warn); }
+.must-read-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--warn); background: var(--warn-soft); padding: 2px 7px; border-radius: var(--radius-pill); white-space: nowrap; }
+.must-read-badge .icon { color: var(--warn); }
+.icon-btn.star-on { color: var(--warn); }
+.icon-btn.star-on:hover { color: var(--warn); background: var(--warn-soft); }
+.downloaded-check { color: var(--ok); margin-left: 6px; }
 .cell-check input, .checkbox-row input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
 .cell-actions { display: flex; gap: 4px; justify-content: flex-end; }
 .cell-download { display: flex; justify-content: flex-end; }

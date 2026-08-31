@@ -59,6 +59,11 @@ class FileAsset(models.Model):
     visibility = models.CharField(max_length=20, choices=Visibility.choices, default=Visibility.ALL)
     status = models.CharField(max_length=20, choices=FileStatus.choices, default=FileStatus.DRAFT)
 
+    # Editors flag required reading. A reader's progress ("X of Y") counts
+    # only must-read files: Y is how many they must read, X is how many of
+    # those they've downloaded.
+    must_read = models.BooleanField(default=False)
+
     checksum_sha256 = models.CharField(max_length=64, blank=True)
     # TODO(phase 2): a background worker flips this via a ClamAV scan
     # before a file is allowed to leave draft — wired up as a stub here.

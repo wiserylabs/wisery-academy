@@ -19,6 +19,7 @@ export default function FileDrawer({ modal, tracks, actions }) {
   const [title, setTitle] = useState(file?.title ?? "");
   const [version, setVersion] = useState(file?.version ?? "1.0");
   const [visibility, setVisibility] = useState(file?.visibility ?? defaultVisibility);
+  const [mustRead, setMustRead] = useState(file?.must_read ?? false);
   const [annotation, setAnnotation] = useState(file?.annotation ?? "");
   const [selectedFile, setSelectedFile] = useState(null);
   const [dragging, setDragging] = useState(false);
@@ -46,9 +47,9 @@ export default function FileDrawer({ modal, tracks, actions }) {
     setBusy(true);
     try {
       if (isEdit) {
-        await actions.updateFile(file, { title, version, visibility, annotation });
+        await actions.updateFile(file, { title, version, visibility, annotation, must_read: mustRead });
       } else {
-        await actions.upload(track.id, { title, version, visibility, annotation, file: selectedFile });
+        await actions.upload(track.id, { title, version, visibility, annotation, must_read: mustRead, file: selectedFile });
       }
       actions.closeModal();
     } catch (err) {
@@ -112,6 +113,10 @@ export default function FileDrawer({ modal, tracks, actions }) {
               ))}
             </div>
           </div>
+          <label className="checkbox-row">
+            <input type="checkbox" checked={mustRead} onChange={() => setMustRead(!mustRead)} />
+            <span>Mark as <strong>must-read</strong> — counts toward every reader's required-reading progress</span>
+          </label>
           <div className="field">
             <label>Annotation</label>
             <textarea rows={3} value={annotation} onChange={(e) => setAnnotation(e.target.value)} placeholder="Optional note shown to readers of this file…" />

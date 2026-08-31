@@ -2,24 +2,29 @@ import { Icon, Pips } from "../demo/ui.jsx";
 import { formatDate } from "./format.js";
 
 function ProgressPanel({ tracks }) {
-  const published = tracks.reduce((s, t) => s + (t.published_count || 0), 0);
-  const downloaded = tracks.reduce((s, t) => s + (t.downloaded_count || 0), 0);
-  const files = tracks.reduce((s, t) => s + (t.file_count || 0), 0);
-  const pct = published ? Math.round((downloaded / published) * 100) : 0;
+  // Progress is measured against required reading: Y = must-read files the
+  // user can see, X = how many of those they've downloaded.
+  const mustRead = tracks.reduce((s, t) => s + (t.must_read_count || 0), 0);
+  const mustReadDone = tracks.reduce((s, t) => s + (t.must_read_downloaded_count || 0), 0);
+  const pct = mustRead ? Math.round((mustReadDone / mustRead) * 100) : 0;
+  const material = tracks.filter((t) => t.slug !== "technical-section");
+  const files = material.reduce((s, t) => s + (t.file_count || 0), 0);
 
   return (
     <aside className="progress-panel">
       <span className="panel-kicker">Your progress</span>
       <div className="progress-headline">
-        <span className="progress-big">{downloaded}</span>
-        <span className="progress-of">of {published} files downloaded</span>
+        <span className="progress-big">{mustReadDone}</span>
+        <span className="progress-of">
+          {mustRead > 0 ? `of ${mustRead} must-read ${mustRead === 1 ? "file" : "files"} done` : "no required reading yet"}
+        </span>
       </div>
       <div className="progress-bar">
         <span className="progress-bar-fill" style={{ width: `${pct}%` }} />
         <span className="progress-bar-pct">{pct}%</span>
       </div>
       <dl className="progress-rows">
-        <div className="progress-row"><dt>Material tracks</dt><dd>{tracks.length}</dd></div>
+        <div className="progress-row"><dt>Required reading</dt><dd>{mustReadDone}/{mustRead}</dd></div>
         <div className="progress-row"><dt>Files available</dt><dd>{files}</dd></div>
         <div className="progress-row"><dt>Certification exam</dt><dd className="accent">Opens 14 Sep</dd></div>
       </dl>
@@ -84,7 +89,7 @@ export default function Home({ tracks, tracksError, role, actions }) {
             course ends.
           </p>
         </div>
-        <ProgressPanel tracks={material} />
+        <ProgressPanel tracks={tracks} />
       </section>
 
       <section className="tracks-section">

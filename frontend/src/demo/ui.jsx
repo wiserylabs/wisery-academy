@@ -46,6 +46,7 @@ const PATHS = {
   chevron: "M8.6 5.6 7.2 7l5 5-5 5 1.4 1.4L15 12 8.6 5.6Z",
   play: "M8 5v14l11-7L8 5Z",
   shield: "M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z",
+  star: "M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.9 6.1 20.9l1.2-6.5L2.5 9.8l6.6-.9L12 2.5z",
 };
 
 export function Icon({ name, size = 16, className = "" }) {

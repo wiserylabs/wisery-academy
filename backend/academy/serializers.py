@@ -20,7 +20,7 @@ class FileAssetSerializer(serializers.ModelSerializer):
         # get a raw storage path back, only the presigned "download_url".
         fields = [
             "id", "track", "title", "version", "file", "download_url",
-            "size_bytes", "mime_type", "visibility", "status",
+            "size_bytes", "mime_type", "visibility", "status", "must_read",
             "checksum_sha256", "scan_status", "annotation",
             "uploaded_by_email", "downloaded", "created_at", "published_at",
         ]
@@ -56,6 +56,11 @@ class TrackSerializer(serializers.ModelSerializer):
     # to published files only, since a draft was never downloadable.
     published_count = serializers.SerializerMethodField()
     downloaded_count = serializers.SerializerMethodField()
+    # Required-reading progress: how many published must-read files this user
+    # can see, and how many of those they've downloaded. Drives the "X of Y"
+    # progress panel.
+    must_read_count = serializers.SerializerMethodField()
+    must_read_downloaded_count = serializers.SerializerMethodField()
     # Most-recent publish in the track — backs the "Updated <date>" line on
     # each home card. Null for a track with nothing published yet.
     updated_at = serializers.SerializerMethodField()
@@ -64,8 +69,40 @@ class TrackSerializer(serializers.ModelSerializer):
         model = Track
         fields = [
             "id", "slug", "title", "description", "sort_order",
-            "file_count", "published_count", "downloaded_count", "updated_at",
+            "file_count", "published_count", "downloaded_count",
+            "must_read_count", "must_read_downloaded_count", "updated_at",
         ]
+
+    def _visible_published(self, obj):
+        # Published files in this track that the requesting user may see,
+        # mirroring FileAssetViewSet.get_queryset's visibility rules so a
+        # Student's required-reading total never includes files hidden from
+        # them.
+        qs = obj.files.filter(status="published")
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return qs.filter(visibility="all")
+        if user.is_editor:
+            return qs
+        if user.is_technical_or_above:
+            return qs.exclude(visibility="editors_only")
+        return qs.filter(visibility="all")
+
+    def get_must_read_count(self, obj):
+        return self._visible_published(obj).filter(must_read=True).count()
+
+    def get_must_read_downloaded_count(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return 0
+        return FileProgress.objects.filter(
+            user=request.user,
+            file__track=obj,
+            file__status="published",
+            file__must_read=True,
+            downloaded_at__isnull=False,
+        ).count()
 
     def get_updated_at(self, obj):
         latest = (

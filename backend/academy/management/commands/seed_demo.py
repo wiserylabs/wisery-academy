@@ -115,6 +115,17 @@ FILES = {
     ],
 }
 
+# A handful of files marked required reading, so the progress panel has
+# something to measure the moment the demo is seeded.
+MUST_READ_TITLES = {
+    "Day 1 — Platform foundations",
+    "Day 5 — Operations & certification",
+    "Ingesting a mixed-source document set",
+    "Building your first entity graph",
+    "Study guide — exam blueprint",
+    "Mock exam A (80 questions)",
+}
+
 UNITS = {"KB": 1024, "MB": 1024 ** 2, "GB": 1024 ** 3}
 
 
@@ -169,17 +180,19 @@ class Command(BaseCommand):
             for row in rows:
                 title, version, size, mime = row[0], row[1], row[2], row[3]
                 annotation = row[4] if len(row) > 4 else ""
+                must_read = title in MUST_READ_TITLES
                 if FileAsset.objects.filter(track=track, title=title).exists():
                     fa = FileAsset.objects.get(track=track, title=title)
                     fa.annotation = annotation
-                    fa.save(update_fields=["annotation"])
+                    fa.must_read = must_read
+                    fa.save(update_fields=["annotation", "must_read"])
                     continue
                 fa = FileAsset(
                     track=track, title=title, version=version,
                     size_bytes=to_bytes(size), mime_type=mime,
                     visibility=visibility, status="published",
                     scan_status="clean", annotation=annotation,
-                    uploaded_by=editor, published_at=now,
+                    must_read=must_read, uploaded_by=editor, published_at=now,
                 )
                 # Tiny placeholder so download_url resolves to a real object.
                 placeholder = (

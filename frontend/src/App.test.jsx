@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App.jsx";
+import { api } from "./api.js";
 
 // The connected app talks to the API, so we mock api.js. The mock remembers
 // which account "logged in" so api.me() returns the matching role.
@@ -86,6 +87,14 @@ describe("connected portal", () => {
     await user.click(screen.getByRole("heading", { name: "Hands-On Lab Guides" }));
     await user.click(await screen.findByRole("button", { name: /Manage files/ }));
     expect(screen.getByRole("button", { name: /Add files/ })).toBeInTheDocument();
+  });
+
+  it("lets an Editor mark a file as must-read", async () => {
+    const user = await loginAs("Maya Shani");
+    await user.click(screen.getByRole("heading", { name: "Hands-On Lab Guides" }));
+    await user.click(await screen.findByRole("button", { name: /Manage files/ }));
+    await user.click(screen.getByRole("button", { name: "Mark as must-read" }));
+    expect(api.updateFile).toHaveBeenCalledWith("f1", { must_read: true });
   });
 
   it("signs out back to the login screen", async () => {

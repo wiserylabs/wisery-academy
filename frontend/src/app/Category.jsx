@@ -34,7 +34,14 @@ function FileRow({ file, index, manageMode, columns, actions }) {
     >
       <span className="file-cell cell-index">{isDraft ? "NEW" : String(index + 1).padStart(2, "0")}</span>
       <span className="file-cell cell-title">
-        <span className="file-title">{file.title}</span>
+        <span className="file-title-row">
+          <span className="file-title">{file.title}</span>
+          {file.must_read && (
+            <span className="must-read-badge" title="Required reading">
+              <Icon name="star" size={11} /> Must read
+            </span>
+          )}
+        </span>
         <span className="file-sub">
           {file.visibility !== "all" && <span className="file-vis">{VISIBILITY_LABEL[file.visibility]}</span>}
           {file.visibility !== "all" && (file.annotation || file.downloaded) && " · "}
@@ -51,6 +58,15 @@ function FileRow({ file, index, manageMode, columns, actions }) {
       <span className="file-cell cell-size mono">{humanSize(file.size_bytes)}</span>
       {manageMode ? (
         <span className="file-cell cell-actions" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className={`icon-btn sm ${file.must_read ? "star-on" : ""}`}
+            title={file.must_read ? "Remove must-read" : "Mark as must-read"}
+            aria-pressed={file.must_read}
+            onClick={() => actions.toggleMustRead(file)}
+          >
+            <Icon name="star" size={15} />
+          </button>
           {isDraft && (
             <button type="button" className="icon-btn sm" title="Publish" onClick={() => actions.publish(file)}>
               <Icon name="check" size={15} />
@@ -87,7 +103,7 @@ export default function Category({ track, files, loadingFiles, role, actions }) 
   const done = track.downloaded_count || 0;
   const pct = total ? Math.round((done / total) * 100) : 0;
   const columns = manageMode
-    ? "56px 1fr 150px 96px 84px 120px"
+    ? "56px 1fr 150px 96px 84px 156px"
     : "56px 1fr 150px 96px 84px 96px";
 
   return (

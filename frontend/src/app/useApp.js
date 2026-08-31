@@ -122,6 +122,12 @@ export function useApp() {
     flash("File published — readers can download it now.");
   }, [refresh, flash]);
 
+  const toggleMustRead = useCallback(async (file) => {
+    await api.updateFile(file.id, { must_read: !file.must_read });
+    await refresh(file.track);
+    flash(!file.must_read ? "Marked as must-read." : "No longer must-read.");
+  }, [refresh, flash]);
+
   const remove = useCallback(async (file) => {
     await api.deleteFile(file.id);
     await refresh(file.track);
@@ -155,7 +161,7 @@ export function useApp() {
     route, modal, confirm, toast,
     actions: {
       login, loginAs, logout, go, loadFiles, flash,
-      upload, updateFile, annotate, publish, remove, download,
+      upload, updateFile, annotate, publish, remove, download, toggleMustRead,
       openUpload, openEdit, closeModal, askDelete, cancelDelete, confirmDelete,
     },
   };
