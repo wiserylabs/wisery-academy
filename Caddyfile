@@ -1,0 +1,22 @@
+# Single entry point for the whole stack.
+#
+# The site address is taken from the SITE_ADDRESS environment variable:
+#   - unset / ":80"           -> plain HTTP (fine for a quick demo on an IP)
+#   - "portal.example.com"    -> Caddy automatically obtains and renews a
+#                                Let's Encrypt certificate and serves HTTPS,
+#                                redirecting HTTP to HTTPS for you.
+# No other change is needed to switch between the two.
+{$SITE_ADDRESS::80} {
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle /admin/* {
+		reverse_proxy api:8000
+	}
+	handle /static/* {
+		reverse_proxy api:8000
+	}
+	handle {
+		reverse_proxy frontend:80
+	}
+}
