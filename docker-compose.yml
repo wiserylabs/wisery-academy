@@ -54,7 +54,11 @@ services:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-wisery-admin}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-wisery-admin-secret}
     ports:
-      - "9001:9001"   # MinIO web console (bucket browser)
+      # Bind the console to localhost only: reachable in local dev and, on a
+      # server, over an SSH tunnel -- never exposed to the internet. The S3
+      # API (:9000) is never published at all; the app streams files through
+      # Django, so nothing outside the compose network talks to MinIO.
+      - "127.0.0.1:9001:9001"   # MinIO web console (bucket browser)
     volumes:
       - storage_data:/data
 

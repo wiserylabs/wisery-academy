@@ -119,6 +119,13 @@ CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS", default=["http://localhost:5173", "http://localhost"]
 )
 
+# In production the site sits behind Caddy, which terminates TLS and forwards
+# plain HTTP with an X-Forwarded-Proto header. These let Django know the
+# original request was HTTPS (so secure cookies and the admin's CSRF check
+# work) and trust the real origin for CSRF. Both are harmless in local dev.
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # --- File storage: S3-compatible everywhere. Locally/on a VPS this points
 # at the MinIO container; in AWS, unset S3_ENDPOINT_URL and it talks to
 # real S3 with an IAM user/role instead. No code difference either way. ---

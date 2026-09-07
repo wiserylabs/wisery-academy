@@ -1,0 +1,39 @@
+# Production overrides for a single EC2 (or any) host. Apply on top of the
+# base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# What this layer adds: HTTPS (443) with persistent Caddy certs, the
+# SITE_ADDRESS wiring, and restart policies so everything comes back after a
+# reboot. Database and files stay in-Docker (Postgres + MinIO) with named
+# volumes, exactly as in dev.
+services:
+  proxy:
+    ports:
+      - "443:443"
+    environment:
+      # A bare domain here turns on automatic HTTPS; ":80" serves plain HTTP.
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - caddy_data:/data      # issued certificates -- persist to avoid re-issuing on every restart
+      - caddy_config:/config
+    restart: unless-stopped
+
+  frontend:
+    restart: unless-stopped
+
+  api:
+    restart: unless-stopped
+
+  db:
+    restart: unless-stopped
+
+  storage:
+    restart: unless-stopped
+
+  createbuckets:
+    restart: "no"   # one-shot; must not loop-restart
+
+volumes:
+  caddy_data:
+  caddy_config:
