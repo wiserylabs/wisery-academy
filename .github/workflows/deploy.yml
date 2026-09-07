@@ -1,0 +1,46 @@
+name: Deploy
+
+# Deploys to the EC2 box on every push to main by SSHing in, pulling the new
+# code, and rebuilding the Compose stack. The api container runs migrations on
+# start, so no separate migrate step is needed.
+#
+# Prerequisites (one-time):
+#   1. The repo is on GitHub and the server can read it (a deploy key on the
+#      box, or a public repo).
+#   2. These repository secrets are set
+#      (Settings -> Secrets and variables -> Actions):
+#        SSH_HOST      the instance's Elastic IP or DNS name
+#        SSH_USER      e.g. ec2-user (Amazon Linux) or ubuntu
+#        SSH_KEY       a private key whose public half is in the box's authorized_keys
+#        DEPLOY_PATH   absolute path to the checkout on the box,
+#                      e.g. /home/ec2-user/wisery-academy-portal
+#   3. (Optional) set SSH_PORT if not 22.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # allows a manual "Run workflow" from the Actions tab
+
+# Never let two deploys overlap.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git fetch --all --prune
+            git reset --hard origin/main
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+            docker image prune -f

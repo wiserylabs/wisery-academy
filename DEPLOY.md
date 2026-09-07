@@ -139,6 +139,27 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 Migrations run automatically on the api container's start. Data in the Postgres
 and MinIO volumes is preserved across rebuilds.
 
+### Automated deploys (GitHub Actions)
+
+`.github/workflows/deploy.yml` runs the two `git pull` + rebuild commands for
+you on every push to `main`. One-time setup:
+
+1. **Server can read the repo** — add a read-only **deploy key** for the repo to
+   the instance (`~/.ssh`), or use a public repo. The box's `git fetch` uses this.
+2. **Repo secrets** (Settings → Secrets and variables → Actions):
+   - `SSH_HOST` — the Elastic IP / DNS
+   - `SSH_USER` — e.g. `ec2-user`
+   - `SSH_KEY` — a private key whose public half is in the box's `~/.ssh/authorized_keys`
+   - `DEPLOY_PATH` — the checkout path, e.g. `/home/ec2-user/wisery-academy-portal`
+   - `SSH_PORT` — only if not 22
+
+After that, `git push origin main` builds and restarts the stack on the box.
+You can also trigger it manually from the **Actions** tab ("Run workflow").
+
+> The workflow does `git reset --hard origin/main` on the box, so keep server
+> changes out of the checkout — the only server-specific file is `.env`, which
+> is gitignored and therefore untouched.
+
 ---
 
 ## Backups
