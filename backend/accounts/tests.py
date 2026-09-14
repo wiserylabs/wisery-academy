@@ -1,5 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 
 User = get_user_model()
 
@@ -95,3 +96,51 @@ class TestLoginAndMe:
     def test_me_requires_authentication(self, api_client):
         resp = api_client.get("/api/auth/me/")
         assert resp.status_code == 401
+
+
+@pytest.mark.django_db
+class TestEnsureAdmin:
+    """The bootstrap-admin command wired into container startup."""
+
+    def _run(self, monkeypatch, **env):
+        for key in ("ADMIN_EMAIL", "ADMIN_PASSWORD", "ADMIN_NAME", "ADMIN_FORCE_PASSWORD"):
+            monkeypatch.delenv(key, raising=False)
+        for key, value in env.items():
+            monkeypatch.setenv(key, value)
+        call_command("ensure_admin")
+
+    def test_is_a_noop_without_env(self, monkeypatch):
+        self._run(monkeypatch)
+        assert User.objects.count() == 0
+
+    def test_creates_an_editor_admin(self, monkeypatch):
+        self._run(monkeypatch, ADMIN_EMAIL="admin@wisery.test", ADMIN_PASSWORD="pw-12345678")
+        user = User.objects.get(email="admin@wisery.test")
+        assert user.role == "editor"
+        assert user.is_staff and user.is_superuser
+        assert user.check_password("pw-12345678")
+
+    def test_idempotent_and_keeps_password_by_default(self, monkeypatch):
+        self._run(monkeypatch, ADMIN_EMAIL="admin@wisery.test", ADMIN_PASSWORD="pw-12345678")
+        self._run(monkeypatch, ADMIN_EMAIL="admin@wisery.test", ADMIN_PASSWORD="different-000")
+        assert User.objects.count() == 1
+        assert User.objects.get(email="admin@wisery.test").check_password("pw-12345678")
+
+    def test_force_password_resets(self, monkeypatch):
+        self._run(monkeypatch, ADMIN_EMAIL="admin@wisery.test", ADMIN_PASSWORD="pw-12345678")
+        self._run(
+            monkeypatch, ADMIN_EMAIL="admin@wisery.test",
+            ADMIN_PASSWORD="different-000", ADMIN_FORCE_PASSWORD="1",
+        )
+        assert User.objects.get(email="admin@wisery.test").check_password("different-000")
+
+    def test_promotes_and_reactivates_existing_user(self, monkeypatch):
+        existing = User.objects.create_user(email="admin@wisery.test", password="pw-12345678")
+        existing.is_active = False
+        existing.save()
+        self._run(monkeypatch, ADMIN_EMAIL="admin@wisery.test", ADMIN_PASSWORD="ignored-01")
+        existing.refresh_from_db()
+        assert existing.role == "editor"
+        assert existing.is_active is True
+        # password untouched (no force), so the original still works
+        assert existing.check_password("pw-12345678")

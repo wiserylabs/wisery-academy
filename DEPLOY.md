@@ -78,20 +78,38 @@ cp .env.production.example .env
 #   - generate DJANGO_SECRET_KEY:  python3 -c "import secrets; print(secrets.token_urlsafe(50))"
 #   - set strong POSTGRES_PASSWORD / S3_ACCESS_KEY / S3_SECRET_KEY
 #   - set ALLOWED_HOSTS / CORS_ALLOWED_ORIGINS / CSRF_TRUSTED_ORIGINS / SITE_ADDRESS
+#   - set ADMIN_EMAIL / ADMIN_PASSWORD (a bootstrap Editor auto-created on start)
 nano .env
 
 # 3. Build and start the whole stack
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-The API container runs database migrations and `collectstatic` automatically on
-start. Give it a minute, then:
+The API container runs migrations, **ensures your bootstrap admin exists** (from
+`ADMIN_EMAIL` / `ADMIN_PASSWORD` — see below), and runs `collectstatic`, all
+automatically on start. So if you set those two vars in `.env`, you already have
+a working Editor login the moment the stack is up — no manual step needed.
+
+Prefer to create the admin by hand instead (or add more)? Leave `ADMIN_*` unset
+and run:
 
 ```bash
-# 4. Create your real admin (instead of the demo accounts)
 docker compose -f docker-compose.yml -f docker-compose.prod.yml exec api \
   python manage.py createsuperuser
 ```
+
+### The bootstrap admin (never get locked out)
+
+`ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env` drive an idempotent `ensure_admin`
+step on every deploy:
+- **Missing account →** created as an Editor (and Django-admin superuser).
+- **Existing account →** kept as-is; its password is **not** reset on redeploys,
+  so an admin who changes it in the app keeps it.
+- **Recovery:** set `ADMIN_FORCE_PASSWORD=1` for one deploy to reset the
+  password back to `ADMIN_PASSWORD`, then set it to `0` again.
+
+This is why a fresh box is never stranded without a login. (It's also the fix if
+you ever see "No active account found" — the box was started without any users.)
 
 Open the site:
 - **With a domain:** `https://portal.example.com`
