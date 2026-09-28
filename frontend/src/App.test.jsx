@@ -51,19 +51,30 @@ vi.mock("./api.js", () => {
 
 beforeEach(() => { window.scrollTo = () => {}; });
 
+const EMAIL_FOR = {
+  "Dana Levi": "dana@wisery.ai",
+  "Omer Katz": "omer@wisery.ai",
+  "Maya Shani": "maya@wisery.ai",
+};
+
 async function loginAs(name) {
   const user = userEvent.setup();
   render(<App />);
-  await user.click(screen.getByRole("button", { name: new RegExp(name) }));
+  await user.type(screen.getByPlaceholderText("name@organisation.gov"), EMAIL_FOR[name]);
+  await user.type(screen.getByPlaceholderText("••••••••••"), "pw-12345678");
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
   await waitFor(() => expect(screen.getByRole("heading", { name: "Material tracks" })).toBeInTheDocument());
   return user;
 }
 
 describe("login", () => {
-  it("shows the sign-in panel and demo picker, not the portal", () => {
+  it("shows the sign-in form and not the removed SSO / demo / forgot elements", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
-    expect(screen.getByText(/Demo — sign in as/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("name@organisation.gov")).toBeInTheDocument();
+    expect(screen.queryByText(/Demo — sign in as/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Continue with corporate SSO/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Forgot/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Material tracks")).not.toBeInTheDocument();
   });
 });
@@ -81,12 +92,9 @@ describe("connected portal", () => {
     expect(await screen.findByText("Building your first entity graph")).toBeInTheDocument();
   });
 
-  it("signs in as a different role from the login picker", async () => {
-    const user = await loginAs("Maya Shani");
-    expect(screen.getByText("Maya Shani")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Sign out" }));
-    await user.click(screen.getByRole("button", { name: /Omer Katz/ }));
-    await waitFor(() => expect(screen.getByText("Omer Katz")).toBeInTheDocument());
+  it("signs in via the form as the entered account", async () => {
+    await loginAs("Omer Katz");
+    expect(screen.getByText("Omer Katz")).toBeInTheDocument();
   });
 
   it("gives the Editor manage-mode with Add files inside a track", async () => {
