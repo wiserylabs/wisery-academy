@@ -1,14 +1,11 @@
 import { useState } from "react";
-import { Avatar, Icon } from "../demo/ui.jsx";
-import { DEMO_ACCOUNTS, ROLE_LABEL } from "./format.js";
+import { Icon } from "../demo/ui.jsx";
 
 const FACTS = [
   "Six material tracks from the certification program — decks, lab guides with instruction videos, prompt playbook, sample datasets, admin guide and exam prep.",
   "The Technical Section — runbooks, release notes, escalation paths — opens only for Tier 1 and Tier 2 support engineers.",
   "Editors manage folder contents in place: add, delete and annotate, with every action written to the audit log.",
 ];
-
-const PICKER = ["student", "technical", "editor"];
 
 export default function Login({ actions, authError, authBusy }) {
   const [email, setEmail] = useState("");
@@ -43,22 +40,13 @@ export default function Login({ actions, authError, authBusy }) {
           <h2>Sign in</h2>
           <p className="login-panel-sub">Use your organisation account. Access is granted by role, not by request.</p>
 
-          <button type="button" className="btn btn-outline btn-block sso" disabled={authBusy} onClick={() => actions.loginAs("student")}>
-            <Icon name="shield" size={16} /> Continue with corporate SSO
-          </button>
-
-          <div className="login-or"><span>or sign in directly</span></div>
-
           <form className="login-form" onSubmit={(e) => { e.preventDefault(); actions.login(email, password); }}>
             <div className="field">
               <label>Work email</label>
               <input type="text" placeholder="name@organisation.gov" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div className="field">
-              <div className="field-label-row">
-                <label>Password</label>
-                <button type="button" className="link-btn">Forgot?</button>
-              </div>
+              <label>Password</label>
               <input type="password" placeholder="••••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             <label className="checkbox-row">
@@ -70,27 +58,6 @@ export default function Login({ actions, authError, authBusy }) {
               {authBusy ? "Signing in…" : "Sign in"}
             </button>
           </form>
-
-          <div className="demo-picker">
-            <span className="demo-picker-label">Demo — sign in as</span>
-            <ul className="demo-roles">
-              {PICKER.map((role) => {
-                const a = DEMO_ACCOUNTS[role];
-                return (
-                  <li key={role}>
-                    <button type="button" className="demo-role" disabled={authBusy} onClick={() => actions.loginAs(role)}>
-                      <Avatar initials={a.initials} size={38} />
-                      <span className="demo-role-body">
-                        <span className="demo-role-name">{a.name}</span>
-                        <span className="demo-role-perm">{ROLE_LABEL[role]}</span>
-                      </span>
-                      <Icon name="arrow" size={16} className="demo-role-arrow" />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
         </section>
       </div>
 
