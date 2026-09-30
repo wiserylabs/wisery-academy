@@ -1,7 +1,51 @@
+import { useState } from "react";
 import { Icon, Pips } from "../demo/ui.jsx";
-import { formatDate } from "./format.js";
+import ExamSettingsModal from "./ExamSettingsModal.jsx";
+import { formatDate, monthDay } from "./format.js";
 
-function ProgressPanel({ tracks }) {
+function ExamRow({ settings, role, tracks, actions }) {
+  const [editing, setEditing] = useState(false);
+  const status = settings?.exam_status || "unset";
+  const open = status === "open";
+  const trackId = settings?.exam_track;
+
+  let text = "Not scheduled";
+  let tone = "dim";
+  if (status === "open") {
+    text = settings.exam_closes_at ? `Closes ${monthDay(settings.exam_closes_at)}` : "Open now";
+    tone = "accent";
+  } else if (status === "upcoming") {
+    text = `Opens ${monthDay(settings.exam_opens_at)}`;
+    tone = "accent";
+  } else if (status === "closed") {
+    text = "Closed";
+  }
+
+  return (
+    <div className="progress-row exam-row">
+      <dt>
+        {open && trackId ? (
+          <button type="button" className="exam-link" onClick={() => actions.go("category", { trackId })}>
+            Certification exam <Icon name="arrow" size={12} />
+          </button>
+        ) : (
+          <span>Certification exam</span>
+        )}
+        {role === "editor" && (
+          <button type="button" className="icon-btn xs exam-edit" title="Edit exam window" onClick={() => setEditing(true)}>
+            <Icon name="pencil" size={13} />
+          </button>
+        )}
+      </dt>
+      <dd className={tone}>{text}</dd>
+      {editing && (
+        <ExamSettingsModal settings={settings} tracks={tracks} actions={actions} onClose={() => setEditing(false)} />
+      )}
+    </div>
+  );
+}
+
+function ProgressPanel({ tracks, settings, role, actions }) {
   // Progress is measured against required reading: Y = must-read files the
   // user can see, X = how many of those they've downloaded.
   const mustRead = tracks.reduce((s, t) => s + (t.must_read_count || 0), 0);
@@ -26,7 +70,7 @@ function ProgressPanel({ tracks }) {
       <dl className="progress-rows">
         <div className="progress-row"><dt>Required reading</dt><dd>{mustReadDone}/{mustRead}</dd></div>
         <div className="progress-row"><dt>Files available</dt><dd>{files}</dd></div>
-        <div className="progress-row"><dt>Certification exam</dt><dd className="accent">Opens 14 Sep</dd></div>
+        <ExamRow settings={settings} role={role} tracks={tracks} actions={actions} />
       </dl>
     </aside>
   );
@@ -59,7 +103,7 @@ function TrackCard({ track, onOpen }) {
   );
 }
 
-export default function Home({ tracks, tracksError, role, actions }) {
+export default function Home({ tracks, tracksError, role, settings, actions }) {
   const material = tracks.filter((t) => t.slug !== "technical-section");
   const technical = tracks.find((t) => t.slug === "technical-section");
   const totalFiles = material.reduce((s, t) => s + (t.file_count || 0), 0);
@@ -89,7 +133,7 @@ export default function Home({ tracks, tracksError, role, actions }) {
             course ends.
           </p>
         </div>
-        <ProgressPanel tracks={tracks} />
+        <ProgressPanel tracks={tracks} settings={settings} role={role} actions={actions} />
       </section>
 
       <section className="tracks-section">

@@ -15,6 +15,7 @@ export function useApp() {
   const [tracksError, setTracksError] = useState("");
   const [filesByTrack, setFilesByTrack] = useState({});
   const [loadingFiles, setLoadingFiles] = useState(false);
+  const [settings, setSettings] = useState(null);
 
   const [route, setRoute] = useState({ name: "home" });
   const [modal, setModal] = useState(null); // {kind:'upload',trackId} | {kind:'edit',file}
@@ -52,11 +53,17 @@ export function useApp() {
     }
   }, [flash]);
 
-  // Load tracks whenever the signed-in user changes (login or role switch).
+  const loadSettings = useCallback(async () => {
+    try {
+      setSettings(await api.settings());
+    } catch { /* the panel just falls back to "not scheduled" */ }
+  }, []);
+
+  // Load tracks + settings whenever the signed-in user changes.
   useEffect(() => {
-    if (user) loadTracks();
-    else { setTracks([]); setFilesByTrack({}); }
-  }, [user, loadTracks]);
+    if (user) { loadTracks(); loadSettings(); }
+    else { setTracks([]); setFilesByTrack({}); setSettings(null); }
+  }, [user, loadTracks, loadSettings]);
 
   // ── Auth ──
   const finishLogin = useCallback(async (email, password) => {
@@ -143,6 +150,12 @@ export function useApp() {
     }
   }, [refresh, flash]);
 
+  const updateSettings = useCallback(async (fields) => {
+    const updated = await api.updateSettings(fields);
+    setSettings(updated);
+    flash("Certification exam window updated.");
+  }, [flash]);
+
   // ── Modals / confirm ──
   const openUpload = useCallback((trackId) => setModal({ kind: "upload", trackId }), []);
   const openEdit = useCallback((file) => setModal({ kind: "edit", file }), []);
@@ -157,12 +170,13 @@ export function useApp() {
 
   return {
     user, authError, authBusy,
-    tracks, tracksError, filesByTrack, loadingFiles,
+    tracks, tracksError, filesByTrack, loadingFiles, settings,
     route, modal, confirm, toast,
     actions: {
       login, loginAs, logout, go, loadFiles, flash,
       upload, updateFile, annotate, publish, remove, download, toggleMustRead,
       openUpload, openEdit, closeModal, askDelete, cancelDelete, confirmDelete,
+      updateSettings,
     },
   };
 }

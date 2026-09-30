@@ -19,6 +19,16 @@ export function formatDate(iso) {
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+// Day + month only ("14 Sep"). Parses a plain YYYY-MM-DD directly so a
+// date-only value never shifts a day across time zones.
+export function monthDay(iso) {
+  if (!iso) return "—";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (m) return `${parseInt(m[3], 10)} ${MONTHS[parseInt(m[2], 10) - 1]}`;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "—" : `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+
 const MIME_LABELS = {
   "application/pdf": "PDF",
   "application/zip": "ZIP",

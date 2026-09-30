@@ -15,9 +15,11 @@ prototype's number, but nothing here ships multi-GB blobs into MinIO.
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
+import datetime
+
 from django.utils import timezone
 
-from academy.models import FileAsset, Track
+from academy.models import FileAsset, SiteSettings, Track
 
 User = get_user_model()
 
@@ -142,6 +144,7 @@ class Command(BaseCommand):
         self._seed_tracks()
         self._seed_files(editor)
         self._secure_technical_section()
+        self._seed_exam_window()
         self.stdout.write(self.style.SUCCESS(
             "\nDemo ready. Sign in with any of:"
             "\n  dana@wisery.ai  (Student)"
@@ -218,3 +221,17 @@ class Command(BaseCommand):
         if count:
             stray.update(visibility="technical_plus")
             self.stdout.write(f"secured {count} stray Technical Section file(s)")
+
+    def _seed_exam_window(self):
+        # A certification-exam window that's open *now*, pointing at the study
+        # guide, so the demo shows the "Certification exam" link live. Only
+        # fills blanks -- an editor's own dates are never overwritten.
+        s = SiteSettings.load()
+        if s.exam_opens_at and s.exam_closes_at and s.exam_track:
+            return
+        today = timezone.localdate()
+        s.exam_opens_at = s.exam_opens_at or today - datetime.timedelta(days=5)
+        s.exam_closes_at = s.exam_closes_at or today + datetime.timedelta(days=55)
+        s.exam_track = s.exam_track or Track.objects.filter(slug="study-guide").first()
+        s.save()
+        self.stdout.write("seeded certification-exam window (open now)")

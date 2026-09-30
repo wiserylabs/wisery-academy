@@ -45,6 +45,15 @@ vi.mock("./api.js", () => {
       createUser: vi.fn(async () => ({})),
       updateUser: vi.fn(async () => ({})),
       deleteUser: vi.fn(async () => null),
+      settings: vi.fn(async () => ({
+        exam_opens_at: "2026-08-01", exam_closes_at: "2026-12-01",
+        exam_track: "t1", exam_track_slug: "slide-decks", exam_track_title: "Slide Decks",
+        exam_status: "open", exam_is_open: true,
+      })),
+      updateSettings: vi.fn(async (f) => ({
+        exam_opens_at: "2026-08-01", exam_closes_at: "2026-12-01", exam_track: "t1",
+        exam_status: "open", exam_is_open: true, ...f,
+      })),
     },
   };
 });
@@ -129,5 +138,20 @@ describe("connected portal", () => {
     expect(await screen.findByRole("heading", { name: "User management" })).toBeInTheDocument();
     expect(screen.getByDisplayValue("dana@wisery.ai")).toBeInTheDocument();
     expect(screen.getByDisplayValue("maya@wisery.ai")).toBeInTheDocument();
+  });
+
+  it("shows the certification exam as a link when open and navigates to its library", async () => {
+    const user = await loginAs("Dana Levi");
+    const examLink = await screen.findByRole("button", { name: /Certification exam/ });
+    await user.click(examLink);
+    expect(await screen.findByRole("button", { name: /All materials/ })).toBeInTheDocument();
+  });
+
+  it("lets an Editor edit the certification exam window", async () => {
+    const user = await loginAs("Maya Shani");
+    await user.click(await screen.findByRole("button", { name: "Edit exam window" }));
+    expect(await screen.findByText(/Set the window when the exam is available/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(api.updateSettings).toHaveBeenCalled());
   });
 });

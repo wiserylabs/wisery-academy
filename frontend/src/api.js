@@ -65,6 +65,12 @@ export const api = {
     const data = await request(`/files/?track=${trackId}`);
     return data?.results ?? data;
   },
+  settings() {
+    return request("/settings/");
+  },
+  updateSettings(fields) {
+    return request("/settings/", { method: "PATCH", body: JSON.stringify(fields) });
+  },
   uploadFile(fields) {
     return request("/files/", { method: "POST", body: toFormData(fields) });
   },
