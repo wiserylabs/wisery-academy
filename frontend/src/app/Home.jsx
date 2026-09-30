@@ -3,11 +3,17 @@ import { Icon, Pips } from "../demo/ui.jsx";
 import ExamSettingsModal from "./ExamSettingsModal.jsx";
 import { formatDate, monthDay } from "./format.js";
 
+// Special libraries that never appear as numbered cards in the material grid.
+const HIDDEN_TRACK_SLUGS = ["technical-section", "certification-exam"];
+
 function ExamRow({ settings, role, tracks, actions }) {
   const [editing, setEditing] = useState(false);
   const status = settings?.exam_status || "unset";
   const open = status === "open";
   const trackId = settings?.exam_track;
+  // Readers reach the exam library only while it's open; editors can always
+  // open it to manage its files.
+  const canOpen = !!trackId && (open || role === "editor");
 
   let text = "Not scheduled";
   let tone = "dim";
@@ -24,7 +30,7 @@ function ExamRow({ settings, role, tracks, actions }) {
   return (
     <div className="progress-row exam-row">
       <dt>
-        {open && trackId ? (
+        {canOpen ? (
           <button type="button" className="exam-link" onClick={() => actions.go("category", { trackId })}>
             Certification exam <Icon name="arrow" size={12} />
           </button>
@@ -51,7 +57,7 @@ function ProgressPanel({ tracks, settings, role, actions }) {
   const mustRead = tracks.reduce((s, t) => s + (t.must_read_count || 0), 0);
   const mustReadDone = tracks.reduce((s, t) => s + (t.must_read_downloaded_count || 0), 0);
   const pct = mustRead ? Math.round((mustReadDone / mustRead) * 100) : 0;
-  const material = tracks.filter((t) => t.slug !== "technical-section");
+  const material = tracks.filter((t) => !HIDDEN_TRACK_SLUGS.includes(t.slug));
   const files = material.reduce((s, t) => s + (t.file_count || 0), 0);
 
   return (
@@ -104,7 +110,7 @@ function TrackCard({ track, onOpen }) {
 }
 
 export default function Home({ tracks, tracksError, role, settings, actions }) {
-  const material = tracks.filter((t) => t.slug !== "technical-section");
+  const material = tracks.filter((t) => !HIDDEN_TRACK_SLUGS.includes(t.slug));
   const technical = tracks.find((t) => t.slug === "technical-section");
   const totalFiles = material.reduce((s, t) => s + (t.file_count || 0), 0);
   const latest = material
