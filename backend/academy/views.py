@@ -5,10 +5,11 @@ from django.utils import timezone
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .models import AuditLog, FileAsset, FileProgress, Track
+from .models import AuditLog, FileAsset, FileProgress, SiteSettings, Track
 from .permissions import CanViewFile, IsEditor
-from .serializers import FileAssetSerializer, TrackSerializer
+from .serializers import FileAssetSerializer, SiteSettingsSerializer, TrackSerializer
 
 
 def log_action(request, action_name, obj):
@@ -109,3 +110,24 @@ class FileAssetViewSet(viewsets.ModelViewSet):
         if file.mime_type:
             response["Content-Type"] = file.mime_type
         return response
+
+
+class SiteSettingsView(APIView):
+    """Portal-wide settings. Everyone reads them (the home progress panel needs
+    the exam window); only Editors change them."""
+
+    def get_permissions(self):
+        if self.request.method in ("PATCH", "PUT"):
+            return [permissions.IsAuthenticated(), IsEditor()]
+        return [permissions.IsAuthenticated()]
+
+    def get(self, request):
+        return Response(SiteSettingsSerializer(SiteSettings.load()).data)
+
+    def patch(self, request):
+        obj = SiteSettings.load()
+        serializer = SiteSettingsSerializer(obj, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        log_action(request, "settings_update", obj)
+        return Response(serializer.data)

@@ -1,6 +1,7 @@
+from django.utils import timezone
 from rest_framework import serializers
 
-from .models import FileAsset, FileProgress, Track
+from .models import FileAsset, FileProgress, SiteSettings, Track
 
 
 class FileAssetSerializer(serializers.ModelSerializer):
@@ -126,3 +127,39 @@ class TrackSerializer(serializers.ModelSerializer):
             file__status="published",
             downloaded_at__isnull=False,
         ).count()
+
+
+class SiteSettingsSerializer(serializers.ModelSerializer):
+    # The exam link needs the target track's slug/title for the frontend, plus
+    # a server-computed status so "open" doesn't drift with the client clock.
+    exam_track_slug = serializers.CharField(source="exam_track.slug", read_only=True, default=None)
+    exam_track_title = serializers.CharField(source="exam_track.title", read_only=True, default=None)
+    exam_status = serializers.SerializerMethodField()
+    exam_is_open = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SiteSettings
+        fields = [
+            "exam_opens_at", "exam_closes_at", "exam_track",
+            "exam_track_slug", "exam_track_title", "exam_status", "exam_is_open",
+        ]
+
+    def get_exam_status(self, obj):
+        if not obj.exam_opens_at or not obj.exam_closes_at:
+            return "unset"
+        today = timezone.localdate()
+        if today < obj.exam_opens_at:
+            return "upcoming"
+        if today > obj.exam_closes_at:
+            return "closed"
+        return "open"
+
+    def get_exam_is_open(self, obj):
+        return self.get_exam_status(obj) == "open"
+
+    def validate(self, attrs):
+        opens = attrs.get("exam_opens_at", getattr(self.instance, "exam_opens_at", None))
+        closes = attrs.get("exam_closes_at", getattr(self.instance, "exam_closes_at", None))
+        if opens and closes and closes < opens:
+            raise serializers.ValidationError("The close date must be on or after the open date.")
+        return attrs

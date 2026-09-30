@@ -135,3 +135,30 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.action} on {self.target_type}:{self.target_id} by {self.user_id}"
+
+
+class SiteSettings(models.Model):
+    """Single row of portal-wide settings editors control. Right now that's the
+    certification-exam window and which material library the exam link opens."""
+
+    exam_opens_at = models.DateField(null=True, blank=True)
+    exam_closes_at = models.DateField(null=True, blank=True)
+    exam_track = models.ForeignKey(
+        Track, null=True, blank=True, on_delete=models.SET_NULL, related_name="+",
+    )
+
+    class Meta:
+        verbose_name = "site settings"
+        verbose_name_plural = "site settings"
+
+    def __str__(self):
+        return "Site settings"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # enforce a singleton row
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

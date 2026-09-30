@@ -326,6 +326,15 @@ textarea { resize: vertical; }
 .progress-row dd { margin: 0; color: var(--text-secondary); font-weight: 600; }
 .progress-row dd.dim { color: var(--dim); font-weight: 500; }
 .progress-row dd.accent { color: var(--accent); }
+.exam-row dt { display: inline-flex; align-items: center; gap: 8px; }
+.exam-link { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; font-size: 13px; cursor: pointer; }
+.exam-link:hover { color: var(--accent-bright); text-decoration: underline; }
+.exam-link .icon { transition: transform 0.15s; }
+.exam-link:hover .icon { transform: translateX(2px); }
+.icon-btn.xs { width: 22px; height: 22px; }
+.exam-edit { color: var(--dim); }
+.exam-edit:hover { color: var(--accent); }
+.exam-modal { width: 460px; }
 
 .tracks-section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; gap: 16px; }
 .tracks-section-head h2 { font-size: 22px; }

@@ -19,7 +19,7 @@ function Toast({ toast }) {
 }
 
 function CurrentRoute({ app }) {
-  const { route, tracks, filesByTrack, loadingFiles, tracksError, user, actions } = app;
+  const { route, tracks, filesByTrack, loadingFiles, tracksError, settings, user, actions } = app;
 
   if (route.name === "category") {
     const track = tracks.find((t) => t.id === route.trackId);
@@ -49,8 +49,8 @@ function CurrentRoute({ app }) {
       // Editors only — anyone else falls back home.
       return user.role === "editor"
         ? <Users currentUser={user} actions={actions} />
-        : <Home tracks={tracks} tracksError={tracksError} role={user.role} actions={actions} />;
-    default: return <Home tracks={tracks} tracksError={tracksError} role={user.role} actions={actions} />;
+        : <Home tracks={tracks} tracksError={tracksError} role={user.role} settings={settings} actions={actions} />;
+    default: return <Home tracks={tracks} tracksError={tracksError} role={user.role} settings={settings} actions={actions} />;
   }
 }
 
