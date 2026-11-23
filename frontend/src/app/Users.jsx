@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
 import { Icon } from "../demo/ui.jsx";
+import LearnerProgressModal from "./LearnerProgressModal.jsx";
 
 const ROLES = ["student", "technical", "editor"];
 const BLANK = { email: "", full_name: "", role: "student", password: "" };
@@ -12,6 +13,7 @@ export default function Users({ currentUser, actions }) {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
+  const [progressUser, setProgressUser] = useState(null);
   const [newUser, setNewUser] = useState(BLANK);
   const [creating, setCreating] = useState(false);
   const [createErr, setCreateErr] = useState("");
@@ -93,7 +95,7 @@ export default function Users({ currentUser, actions }) {
     }
   }
 
-  const columns = "1.3fr 1.1fr 130px 160px 132px";
+  const columns = "1.3fr 1.1fr 130px 160px 214px";
 
   return (
     <div className="users">
@@ -174,6 +176,12 @@ export default function Users({ currentUser, actions }) {
                     onChange={(ev) => setEdit(u.id, { password: ev.target.value })} />
                 </span>
                 <span className="user-cell user-actions">
+                  {u.role !== "editor" && (
+                    <button type="button" className="btn btn-outline sm" title="Mark this learner's items completed"
+                      onClick={() => setProgressUser(u)}>
+                      Progress
+                    </button>
+                  )}
                   <button type="button" className="btn btn-solid sm" disabled={!dirty[u.id] || busyId === u.id} onClick={() => save(u)}>
                     Save
                   </button>
@@ -194,6 +202,10 @@ export default function Users({ currentUser, actions }) {
           })
         )}
       </div>
+
+      {progressUser && (
+        <LearnerProgressModal learner={progressUser} actions={actions} onClose={() => setProgressUser(null)} />
+      )}
     </div>
   );
 }

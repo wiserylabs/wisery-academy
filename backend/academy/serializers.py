@@ -14,6 +14,8 @@ class FileAssetSerializer(serializers.ModelSerializer):
     # small "already downloaded" indicator in the file table. Always False
     # for an anonymous/missing request context (e.g. serialized outside a view).
     downloaded = serializers.SerializerMethodField()
+    # Whether an Editor has marked this file completed for the CURRENT user.
+    completed = serializers.SerializerMethodField()
 
     class Meta:
         model = FileAsset
@@ -23,11 +25,11 @@ class FileAssetSerializer(serializers.ModelSerializer):
             "id", "track", "title", "version", "file", "download_url",
             "size_bytes", "mime_type", "visibility", "status", "must_read",
             "checksum_sha256", "scan_status", "annotation",
-            "uploaded_by_email", "downloaded", "created_at", "published_at",
+            "uploaded_by_email", "downloaded", "completed", "created_at", "published_at",
         ]
         read_only_fields = [
             "id", "size_bytes", "checksum_sha256", "scan_status",
-            "status", "uploaded_by_email", "downloaded", "created_at", "published_at",
+            "status", "uploaded_by_email", "downloaded", "completed", "created_at", "published_at",
         ]
         extra_kwargs = {"file": {"write_only": True}}
 
@@ -49,6 +51,14 @@ class FileAssetSerializer(serializers.ModelSerializer):
             user=request.user, file=obj, downloaded_at__isnull=False
         ).exists()
 
+    def get_completed(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return FileProgress.objects.filter(
+            user=request.user, file=obj, completed_at__isnull=False
+        ).exists()
+
 
 class TrackSerializer(serializers.ModelSerializer):
     file_count = serializers.IntegerField(source="files.count", read_only=True)
@@ -62,6 +72,11 @@ class TrackSerializer(serializers.ModelSerializer):
     # progress panel.
     must_read_count = serializers.SerializerMethodField()
     must_read_downloaded_count = serializers.SerializerMethodField()
+    # Editor-confirmed completion for the requesting user. These — not
+    # downloads — drive the progress panel ("X of Y must-read done") and the
+    # per-track done/total on the home cards.
+    completed_count = serializers.SerializerMethodField()
+    must_read_completed_count = serializers.SerializerMethodField()
     # Most-recent publish in the track — backs the "Updated <date>" line on
     # each home card. Null for a track with nothing published yet.
     updated_at = serializers.SerializerMethodField()
@@ -71,8 +86,23 @@ class TrackSerializer(serializers.ModelSerializer):
         fields = [
             "id", "slug", "title", "description", "sort_order",
             "file_count", "published_count", "downloaded_count",
-            "must_read_count", "must_read_downloaded_count", "updated_at",
+            "must_read_count", "must_read_downloaded_count",
+            "completed_count", "must_read_completed_count", "updated_at",
         ]
+
+    def _completed_for_user(self, files):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return 0
+        return FileProgress.objects.filter(
+            user=request.user, file__in=files, completed_at__isnull=False,
+        ).count()
+
+    def get_completed_count(self, obj):
+        return self._completed_for_user(self._visible_published(obj))
+
+    def get_must_read_completed_count(self, obj):
+        return self._completed_for_user(self._visible_published(obj).filter(must_read=True))
 
     def _visible_published(self, obj):
         # Published files in this track that the requesting user may see,

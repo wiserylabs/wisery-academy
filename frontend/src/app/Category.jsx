@@ -2,15 +2,16 @@ import { useMemo, useState } from "react";
 import { Icon, StatusPill } from "../demo/ui.jsx";
 import { VISIBILITY_LABEL, formatBadge, humanSize } from "./format.js";
 
-const FILTERS = ["All", "Recently updated", "Not started", "Downloaded"];
+const FILTERS = ["All", "Recently updated", "Not started", "Completed"];
 const RECENT_MS = 45 * 24 * 60 * 60 * 1000;
 
+// "Completed" is set by an Editor for each learner, not by downloading.
 function applyFilter(files, filter) {
   switch (filter) {
-    case "Downloaded":
-      return files.filter((f) => f.downloaded);
+    case "Completed":
+      return files.filter((f) => f.completed);
     case "Not started":
-      return files.filter((f) => f.status === "published" && !f.downloaded);
+      return files.filter((f) => f.status === "published" && !f.completed);
     case "Recently updated":
       return [...files].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         .filter((f) => Date.now() - new Date(f.published_at || f.created_at).getTime() < RECENT_MS);
@@ -41,6 +42,11 @@ function FileRow({ file, index, manageMode, columns, actions }) {
               <Icon name="star" size={11} /> Must read
             </span>
           )}
+          {file.completed && (
+            <span className="completed-badge" title="Marked completed by an Editor">
+              <Icon name="check" size={11} /> Completed
+            </span>
+          )}
         </span>
         <span className="file-sub">
           {file.visibility !== "all" && <span className="file-vis">{VISIBILITY_LABEL[file.visibility]}</span>}
@@ -52,7 +58,6 @@ function FileRow({ file, index, manageMode, columns, actions }) {
       </span>
       <span className="file-cell cell-status">
         <StatusPill label={isDraft ? "Draft" : "Published"} tone={isDraft ? "warning" : "success"} />
-        {file.downloaded && <Icon name="check" size={13} className="downloaded-check" />}
       </span>
       <span className="file-cell cell-version mono">{file.version}</span>
       <span className="file-cell cell-size mono">{humanSize(file.size_bytes)}</span>
@@ -101,7 +106,7 @@ export default function Category({ track, files, loadingFiles, role, actions }) 
   const visible = useMemo(() => applyFilter(files || [], filter), [files, filter]);
   const num = String(track.sort_order || 0).padStart(2, "0");
   const total = track.published_count || 0;
-  const done = track.downloaded_count || 0;
+  const done = track.completed_count || 0;
   const pct = total ? Math.round((done / total) * 100) : 0;
   const columns = manageMode
     ? "56px 1fr 150px 96px 84px 156px"
@@ -130,7 +135,7 @@ export default function Category({ track, files, loadingFiles, role, actions }) 
         </div>
         <div className="cat-head-aside">
           <div className="cat-progress">
-            <span className="cat-progress-label">Downloaded</span>
+            <span className="cat-progress-label">Completed</span>
             <span className="cat-progress-value">{done} / {total}</span>
             <div className="cat-progress-bar"><span style={{ width: `${pct}%` }} /></div>
           </div>

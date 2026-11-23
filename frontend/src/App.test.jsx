@@ -12,16 +12,23 @@ const USERS = {
   "maya@wisery.ai": { id: 3, email: "maya@wisery.ai", full_name: "Maya Shani", role: "editor" },
 };
 
+// Slide Decks: both must-read files were downloaded, but an Editor has marked
+// only one completed -- so progress must read "1 of 2", not "2 of 2".
 const TRACKS = [
-  { id: "t1", slug: "slide-decks", title: "Slide Decks", description: "Instructor decks.", sort_order: 1, file_count: 2, published_count: 2, downloaded_count: 1, updated_at: "2026-08-18T00:00:00Z" },
-  { id: "t2", slug: "lab-guides", title: "Hands-On Lab Guides", description: "Lab booklets.", sort_order: 2, file_count: 1, published_count: 1, downloaded_count: 0, updated_at: "2026-08-21T00:00:00Z" },
+  { id: "t1", slug: "slide-decks", title: "Slide Decks", description: "Instructor decks.", sort_order: 1, file_count: 2, published_count: 2, downloaded_count: 2, completed_count: 1, must_read_count: 2, must_read_downloaded_count: 2, must_read_completed_count: 1, updated_at: "2026-08-18T00:00:00Z" },
+  { id: "t2", slug: "lab-guides", title: "Hands-On Lab Guides", description: "Lab booklets.", sort_order: 2, file_count: 1, published_count: 1, downloaded_count: 0, completed_count: 1, updated_at: "2026-08-21T00:00:00Z" },
   { id: "tech", slug: "technical-section", title: "Technical Section", description: "Runbooks.", sort_order: 7, file_count: 0, published_count: 0, downloaded_count: 0, updated_at: null },
 ];
 
 const FILES = {
   t2: [
-    { id: "f1", track: "t2", title: "Building your first entity graph", version: "2.4.1", size_bytes: 19000000, mime_type: "application/pdf", visibility: "all", status: "published", annotation: "", download_url: "http://x/f1.pdf", downloaded: false, created_at: "2026-08-21T00:00:00Z", published_at: "2026-08-21T00:00:00Z" },
+    { id: "f1", track: "t2", title: "Building your first entity graph", version: "2.4.1", size_bytes: 19000000, mime_type: "application/pdf", visibility: "all", status: "published", annotation: "", download_url: "http://x/f1.pdf", downloaded: false, completed: true, created_at: "2026-08-21T00:00:00Z", published_at: "2026-08-21T00:00:00Z" },
   ],
+};
+
+const LEARNER_ITEM = {
+  file: "f1", title: "Building your first entity graph", version: "2.4.1", track: "t2",
+  track_title: "Hands-On Lab Guides", completed_at: null, completed_by: null, downloaded: true,
 };
 
 vi.mock("./api.js", () => {
@@ -49,6 +56,14 @@ vi.mock("./api.js", () => {
         exam_opens_at: "2026-08-01", exam_closes_at: "2026-12-01",
         exam_track: "t1", exam_track_slug: "slide-decks", exam_track_title: "Slide Decks",
         exam_status: "open", exam_is_open: true,
+      })),
+      learnerProgress: vi.fn(async () => ({
+        user: { id: 1, email: "dana@wisery.ai", full_name: "Dana Levi", role: "student" },
+        completed: 0, total: 1, items: [{ ...LEARNER_ITEM, completed: false }],
+      })),
+      setLearnerCompletion: vi.fn(async (userId, fileId, completed) => ({
+        user: { id: 1, email: "dana@wisery.ai", full_name: "Dana Levi", role: "student" },
+        completed: completed ? 1 : 0, total: 1, items: [{ ...LEARNER_ITEM, completed }],
       })),
       updateSettings: vi.fn(async (f) => ({
         exam_opens_at: "2026-08-01", exam_closes_at: "2026-12-01", exam_track: "t1",
@@ -145,6 +160,32 @@ describe("connected portal", () => {
     const examLink = await screen.findByRole("button", { name: /Certification exam/ });
     await user.click(examLink);
     expect(await screen.findByRole("button", { name: /All materials/ })).toBeInTheDocument();
+  });
+
+  it("counts only Editor-completed items in progress, not downloads", async () => {
+    await loginAs("Dana Levi");
+    // Both Slide Decks must-reads were downloaded, but only one was marked completed.
+    const headline = await screen.findByText(/of 2 must-read files done/);
+    expect(headline.previousSibling).toHaveTextContent("1");
+    expect(screen.getByText("Required reading").nextSibling).toHaveTextContent("1/2");
+  });
+
+  it("shows a Completed mark on items an Editor completed for the learner", async () => {
+    const user = await loginAs("Dana Levi");
+    await user.click(screen.getByRole("heading", { name: "Hands-On Lab Guides" }));
+    expect(await screen.findByText("Building your first entity graph")).toBeInTheDocument();
+    expect(screen.getByTitle("Marked completed by an Editor")).toBeInTheDocument();
+  });
+
+  it("lets an Editor mark an item completed for a specific learner", async () => {
+    const user = await loginAs("Maya Shani");
+    await user.click(screen.getByRole("button", { name: "Users" }));
+    await user.click(await screen.findByRole("button", { name: "Progress" }));
+    const box = await screen.findByRole("checkbox", { name: "Mark Building your first entity graph completed" });
+    expect(box).not.toBeChecked();
+    await user.click(box);
+    expect(api.setLearnerCompletion).toHaveBeenCalledWith(1, "f1", true);
+    await waitFor(() => expect(box).toBeChecked());
   });
 
   it("lets an Editor edit the certification exam window", async () => {
