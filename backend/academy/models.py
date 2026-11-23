@@ -113,6 +113,14 @@ class FileProgress(models.Model):
     file = models.ForeignKey(FileAsset, related_name="progress", on_delete=models.CASCADE)
     first_opened_at = models.DateTimeField(null=True, blank=True)
     downloaded_at = models.DateTimeField(null=True, blank=True)
+    # Completion is confirmed by an Editor, not inferred from a download: an
+    # item only counts toward a learner's progress once an Editor marks it
+    # completed for them.
+    completed_at = models.DateTimeField(null=True, blank=True)
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="+",
+    )
 
     class Meta:
         unique_together = ("user", "file")

@@ -1,9 +1,13 @@
 import os
+import uuid
 
+from django.contrib.auth import get_user_model
 from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -11,15 +15,30 @@ from .models import AuditLog, FileAsset, FileProgress, SiteSettings, Track
 from .permissions import CanViewFile, IsEditor
 from .serializers import FileAssetSerializer, SiteSettingsSerializer, TrackSerializer
 
+User = get_user_model()
 
-def log_action(request, action_name, obj):
+
+def log_action(request, action_name, obj, **metadata):
     AuditLog.objects.create(
         user=request.user if request.user.is_authenticated else None,
         action=action_name,
         target_type=obj.__class__.__name__,
         target_id=str(obj.pk),
+        metadata=metadata,
         ip_address=request.META.get("REMOTE_ADDR"),
     )
+
+
+def visible_published_for(user):
+    """Published files the given user may see -- the same draft/visibility
+    rules FileAssetViewSet applies to the requesting user, but for any user,
+    so an Editor can work with a learner's view of the content."""
+    qs = FileAsset.objects.filter(status="published").select_related("track")
+    if user.is_editor:
+        return qs
+    if user.is_technical_or_above:
+        return qs.exclude(visibility="editors_only")
+    return qs.filter(visibility="all")
 
 
 class TrackViewSet(viewsets.ReadOnlyModelViewSet):
@@ -131,3 +150,72 @@ class SiteSettingsView(APIView):
         serializer.save()
         log_action(request, "settings_update", obj)
         return Response(serializer.data)
+
+
+class LearnerProgressView(APIView):
+    """Editor-only: a learner's must-read checklist, and the switch that marks
+    an item completed for them. Completion is what counts toward a learner's
+    progress -- downloading a file no longer does."""
+
+    permission_classes = [permissions.IsAuthenticated, IsEditor]
+
+    def _payload(self, learner):
+        files = (
+            visible_published_for(learner)
+            .filter(must_read=True)
+            .order_by("track__sort_order", "title")
+        )
+        progress = {
+            p.file_id: p
+            for p in FileProgress.objects.filter(user=learner, file__in=files).select_related("completed_by")
+        }
+        items = []
+        for f in files:
+            p = progress.get(f.id)
+            done = bool(p and p.completed_at)
+            items.append({
+                "file": str(f.id),
+                "title": f.title,
+                "version": f.version,
+                "track": f.track_id,
+                "track_title": f.track.title,
+                "completed": done,
+                "completed_at": p.completed_at.isoformat() if done else None,
+                "completed_by": p.completed_by.email if done and p.completed_by else None,
+                "downloaded": bool(p and p.downloaded_at),
+            })
+        return {
+            "user": {
+                "id": learner.id, "email": learner.email,
+                "full_name": learner.full_name, "role": learner.role,
+            },
+            "completed": sum(1 for i in items if i["completed"]),
+            "total": len(items),
+            "items": items,
+        }
+
+    def get(self, request, user_id):
+        return Response(self._payload(get_object_or_404(User, pk=user_id)))
+
+    def patch(self, request, user_id):
+        learner = get_object_or_404(User, pk=user_id)
+        completed = request.data.get("completed")
+        if not isinstance(completed, bool):
+            raise ValidationError({"completed": "Must be true or false."})
+        try:
+            file_id = uuid.UUID(str(request.data.get("file")))
+        except ValueError:
+            raise ValidationError({"file": "A valid file id is required."})
+        file = visible_published_for(learner).filter(pk=file_id).first()
+        if file is None:
+            raise ValidationError({"file": "Not a published file this user can see."})
+
+        progress, _ = FileProgress.objects.get_or_create(user=learner, file=file)
+        progress.completed_at = timezone.now() if completed else None
+        progress.completed_by = request.user if completed else None
+        progress.save(update_fields=["completed_at", "completed_by"])
+        log_action(
+            request, "mark_completed" if completed else "unmark_completed", file,
+            learner=learner.email,
+        )
+        return Response(self._payload(learner))

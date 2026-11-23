@@ -53,9 +53,9 @@ function ExamRow({ settings, role, tracks, actions }) {
 
 function ProgressPanel({ tracks, settings, role, actions }) {
   // Progress is measured against required reading: Y = must-read files the
-  // user can see, X = how many of those they've downloaded.
+  // user can see, X = how many of those an Editor has marked completed for them.
   const mustRead = tracks.reduce((s, t) => s + (t.must_read_count || 0), 0);
-  const mustReadDone = tracks.reduce((s, t) => s + (t.must_read_downloaded_count || 0), 0);
+  const mustReadDone = tracks.reduce((s, t) => s + (t.must_read_completed_count || 0), 0);
   const pct = mustRead ? Math.round((mustReadDone / mustRead) * 100) : 0;
   const material = tracks.filter((t) => !HIDDEN_TRACK_SLUGS.includes(t.slug));
   const files = material.reduce((s, t) => s + (t.file_count || 0), 0);
@@ -85,7 +85,7 @@ function ProgressPanel({ tracks, settings, role, actions }) {
 function TrackCard({ track, onOpen }) {
   const num = String(track.sort_order || 0).padStart(2, "0");
   const total = track.published_count || 0;
-  const done = track.downloaded_count || 0;
+  const done = track.completed_count || 0;
   return (
     <button type="button" className="track-card" onClick={onOpen}>
       <div className="track-card-top">

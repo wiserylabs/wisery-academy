@@ -71,6 +71,16 @@ export const api = {
   updateSettings(fields) {
     return request("/settings/", { method: "PATCH", body: JSON.stringify(fields) });
   },
+  // --- Editor-only: a learner's must-read checklist + completion marks ---
+  learnerProgress(userId) {
+    return request(`/learners/${userId}/progress/`);
+  },
+  setLearnerCompletion(userId, fileId, completed) {
+    return request(`/learners/${userId}/progress/`, {
+      method: "PATCH",
+      body: JSON.stringify({ file: fileId, completed }),
+    });
+  },
   uploadFile(fields) {
     return request("/files/", { method: "POST", body: toFormData(fields) });
   },

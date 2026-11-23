@@ -336,6 +336,26 @@ textarea { resize: vertical; }
 .exam-edit:hover { color: var(--accent); }
 .exam-modal { width: 460px; }
 
+/* Editor: a learner's must-read checklist */
+.learner-modal { width: 580px; max-height: 86vh; display: flex; flex-direction: column; }
+.learner-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.learner-head .modal-title { margin-bottom: 2px; }
+.learner-sub { font-size: 12px; color: var(--text-fourth); }
+.learner-summary { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--text-third); }
+.learner-summary strong { color: var(--text-main); }
+.learner-pct { font-family: var(--font-mono); font-weight: 600; color: var(--accent); }
+.cat-progress-bar.learner-bar { width: 100%; margin: 8px 0 16px; }
+.learner-list { overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-right: 4px; margin-bottom: 18px; }
+.learner-group { display: flex; flex-direction: column; gap: 4px; }
+.learner-group .panel-kicker { margin-bottom: 4px; }
+.learner-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; border: 1px solid var(--border-color); border-radius: var(--radius); background: var(--control-inset-bg); cursor: pointer; transition: border-color 0.15s; }
+.learner-item:hover { border-color: var(--border-medium); }
+.learner-item.done { border-color: rgba(95, 201, 138, 0.45); background: var(--ok-soft); }
+.learner-item input { margin-top: 2px; width: 15px; height: 15px; accent-color: var(--ok); cursor: pointer; flex: none; }
+.learner-item-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.learner-item-title { font-size: 13px; font-weight: 600; color: var(--text-main); }
+.learner-item-meta { font-size: 11.5px; color: var(--text-fourth); }
+
 .tracks-section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; gap: 16px; }
 .tracks-section-head h2 { font-size: 22px; }
 .tracks-meta { font-size: 12px; color: var(--text-fourth); font-family: var(--font-mono); letter-spacing: 0.02em; }
@@ -432,6 +452,8 @@ textarea { resize: vertical; }
 .file-note-inline { color: var(--warn); }
 .must-read-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--warn); background: var(--warn-soft); padding: 2px 7px; border-radius: var(--radius-pill); white-space: nowrap; }
 .must-read-badge .icon { color: var(--warn); }
+.completed-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ok); background: var(--ok-soft); padding: 2px 7px; border-radius: var(--radius-pill); white-space: nowrap; }
+.completed-badge .icon { color: var(--ok); }
 .icon-btn.star-on { color: var(--warn); }
 .icon-btn.star-on:hover { color: var(--warn); background: var(--warn-soft); }
 .downloaded-check { color: var(--ok); margin-left: 6px; }

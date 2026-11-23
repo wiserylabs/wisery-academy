@@ -226,3 +226,101 @@ class TestTrackAPI:
         after = as_user(student).get("/api/tracks/")
         row = next(t for t in after.data["results"] if t["slug"] == "slide-decks")
         assert row["downloaded_count"] == 1
+
+
+def _slide_row(client):
+    resp = client.get("/api/tracks/")
+    return next(t for t in resp.data["results"] if t["slug"] == "slide-decks")
+
+
+@pytest.mark.django_db
+class TestEditorConfirmedCompletion:
+    """An item only counts as done for a learner once an Editor marks it
+    completed for them -- downloading it is not enough."""
+
+    @pytest.fixture
+    def must_read(self, track):
+        return FileAsset.objects.create(
+            track=track, title="Day 1 deck", status="published", visibility="all", must_read=True,
+        )
+
+    def _mark(self, client, learner, file, completed=True):
+        return client.patch(
+            f"/api/learners/{learner.id}/progress/",
+            {"file": str(file.id), "completed": completed},
+            format="json",
+        )
+
+    def test_downloading_does_not_count_as_completion(self, as_user, student, must_read):
+        client = as_user(student)
+        client.post(f"/api/files/{must_read.id}/mark_downloaded/")
+        row = _slide_row(client)
+        assert row["must_read_count"] == 1
+        assert row["must_read_completed_count"] == 0
+        assert client.get(f"/api/files/{must_read.id}/").data["completed"] is False
+
+    def test_editor_marks_completed_for_one_learner_only(self, as_user, editor, student, make_user, must_read):
+        other = make_user("noa@wisery.test", role="student")
+        resp = self._mark(as_user(editor), student, must_read)
+        assert resp.status_code == 200, resp.data
+        assert resp.data["completed"] == 1 and resp.data["total"] == 1
+        assert resp.data["items"][0]["completed_by"] == editor.email
+
+        student_client = as_user(student)
+        row = _slide_row(student_client)
+        assert row["must_read_completed_count"] == 1
+        assert row["completed_count"] == 1
+        assert student_client.get(f"/api/files/{must_read.id}/").data["completed"] is True
+
+        assert _slide_row(as_user(other))["must_read_completed_count"] == 0
+
+    def test_editor_can_unmark(self, as_user, editor, student, must_read):
+        self._mark(as_user(editor), student, must_read, True)
+        resp = self._mark(as_user(editor), student, must_read, False)
+        assert resp.data["completed"] == 0
+        assert _slide_row(as_user(student))["must_read_completed_count"] == 0
+
+    def test_marking_is_audited_with_the_learner(self, as_user, editor, student, must_read):
+        self._mark(as_user(editor), student, must_read)
+        entry = AuditLog.objects.get(action="mark_completed")
+        assert entry.user == editor
+        assert entry.target_id == str(must_read.id)
+        assert entry.metadata == {"learner": student.email}
+
+    @pytest.mark.parametrize("who", ["student", "technical"])
+    def test_only_editors_can_mark_or_view(self, request, as_user, who, student, must_read):
+        client = as_user(request.getfixturevalue(who))
+        assert self._mark(client, student, must_read).status_code == 403
+        assert client.get(f"/api/learners/{student.id}/progress/").status_code == 403
+
+    def test_checklist_lists_only_must_read_items_the_learner_can_see(
+        self, as_user, editor, student, technical, track, technical_track, must_read,
+    ):
+        FileAsset.objects.create(track=track, title="Optional deck", status="published", visibility="all")
+        FileAsset.objects.create(
+            track=technical_track, title="Runbook", status="published",
+            visibility="technical_plus", must_read=True,
+        )
+        client = as_user(editor)
+        student_titles = [i["title"] for i in client.get(f"/api/learners/{student.id}/progress/").data["items"]]
+        technical_titles = [i["title"] for i in client.get(f"/api/learners/{technical.id}/progress/").data["items"]]
+        assert student_titles == ["Day 1 deck"]
+        assert sorted(technical_titles) == ["Day 1 deck", "Runbook"]
+
+    def test_cannot_mark_a_file_hidden_from_the_learner(self, as_user, editor, student, technical_track):
+        hidden = FileAsset.objects.create(
+            track=technical_track, title="Runbook", status="published",
+            visibility="technical_plus", must_read=True,
+        )
+        assert self._mark(as_user(editor), student, hidden).status_code == 400
+
+    def test_rejects_a_bad_file_id_or_flag(self, as_user, editor, student, must_read):
+        client = as_user(editor)
+        bad_id = client.patch(
+            f"/api/learners/{student.id}/progress/", {"file": "nope", "completed": True}, format="json",
+        )
+        bad_flag = client.patch(
+            f"/api/learners/{student.id}/progress/", {"file": str(must_read.id), "completed": "yes"}, format="json",
+        )
+        assert bad_id.status_code == 400
+        assert bad_flag.status_code == 400
