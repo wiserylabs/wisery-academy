@@ -96,6 +96,7 @@ export default function Category({ track, files, loadingFiles, role, actions }) 
   const canEdit = role === "editor";
   const manageMode = canEdit && manage;
   const restricted = track.slug === "technical-section";
+  const isExam = track.slug === "certification-exam";
 
   const visible = useMemo(() => applyFilter(files || [], filter), [files, filter]);
   const num = String(track.sort_order || 0).padStart(2, "0");
@@ -120,9 +121,9 @@ export default function Category({ track, files, loadingFiles, role, actions }) 
 
       <div className="cat-head">
         <div className="cat-head-main">
-          <span className="cat-num">{num}</span>
+          {!isExam && <span className="cat-num">{num}</span>}
           <div>
-            <span className="cat-kicker">Track {num}</span>
+            <span className="cat-kicker">{isExam ? "Certification" : `Track ${num}`}</span>
             <h1 className="cat-title">{track.title}</h1>
             <p className="cat-blurb">{track.description}</p>
           </div>

@@ -49,6 +49,10 @@ TRACKS = [
      "Focused review aligned to the exam: key concepts, mock questions and exam-day tips.", 6),
     ("technical-section", "Technical Section",
      "Runbooks, release notes, escalation paths and deployment docs for Wisery Tier 1 and Tier 2 support engineers.", 7),
+    # The exam library the "Certification exam" link opens. Not a numbered
+    # material track -- it's hidden from the grid and shown without a number.
+    ("certification-exam", "Certification Exam",
+     "The certification exam and everything you need on exam day.", 8),
 ]
 
 # Per-track files: (title, version, size, mime, [annotation]).
@@ -114,6 +118,11 @@ FILES = {
         ("Release notes 2.0 → 2.9", "2.9", "6 MB", "application/pdf"),
         ("Architecture & deployment reference", "2.9", "31 MB", "application/pdf"),
         ("Escalation paths & on-call flows", "2.9", "2 MB", "application/pdf"),
+    ],
+    "certification-exam": [
+        ("Certification exam — 80 questions", "2.4", "6 MB", "application/pdf"),
+        ("Exam instructions & rules", "2.4", "1 MB", "application/pdf"),
+        ("Exam-day checklist", "2.4", "1 MB", "application/pdf"),
     ],
 }
 
@@ -232,6 +241,6 @@ class Command(BaseCommand):
         today = timezone.localdate()
         s.exam_opens_at = s.exam_opens_at or today - datetime.timedelta(days=5)
         s.exam_closes_at = s.exam_closes_at or today + datetime.timedelta(days=55)
-        s.exam_track = s.exam_track or Track.objects.filter(slug="study-guide").first()
+        s.exam_track = s.exam_track or Track.objects.filter(slug="certification-exam").first()
         s.save()
         self.stdout.write("seeded certification-exam window (open now)")
